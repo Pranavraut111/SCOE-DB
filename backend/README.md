@@ -1,27 +1,30 @@
-# Student Management System - Backend
+# SCOE Backend
 
-A robust and scalable backend system for managing student information, built with FastAPI and MySQL. This system provides a comprehensive RESTful API for handling student data, authentication, and administrative functions.
+FastAPI-based backend for the SCOE Database Management System.
 
-## 🚀 Features
+## 🚀 Quick Start
 
-- **Student Management**: Full CRUD operations for student records
-- **Authentication & Authorization**: Secure access control with JWT tokens
-- **Search & Filtering**: Advanced search capabilities with pagination
-- **Data Validation**: Input validation using Pydantic models
-- **API Documentation**: Interactive OpenAPI/Swagger documentation
-- **Testing**: Comprehensive test suite for API endpoints
-- **Scalable Architecture**: Built with performance and scalability in mind
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Initialize database
+python init_db.py
+
+# Start development server
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
 
 ## 🛠️ Tech Stack
 
-- **Framework**: FastAPI (Python 3.8+)
-- **Database**: MySQL 8.0+
-- **ORM**: SQLAlchemy 2.0
-- **Authentication**: JWT (JSON Web Tokens)
-- **API Documentation**: OpenAPI (Swagger UI and ReDoc)
-- **Testing**: Pytest
-- **Dependency Management**: pip
-- **ASGI Server**: Uvicorn
+- **FastAPI** for high-performance API
+- **SQLAlchemy** for database ORM
+- **PostgreSQL** for data storage
+- **Pydantic** for data validation
+- **Python 3.11+**
 
 ## Prerequisites
 
