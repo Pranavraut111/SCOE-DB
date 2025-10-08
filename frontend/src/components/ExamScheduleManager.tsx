@@ -205,6 +205,23 @@ const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
       return;
     }
 
+    // Check for duplicate subject scheduling (only for new schedules, not edits)
+    if (!editingSchedule) {
+      const isDuplicate = schedules.some(schedule => 
+        schedule.subject_id === parseInt(formData.subject_id)
+      );
+      
+      if (isDuplicate) {
+        const subjectName = getSubjectName(parseInt(formData.subject_id));
+        toast({
+          title: "Duplicate Subject",
+          description: `${subjectName} is already scheduled for this exam. Each subject can only be scheduled once.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     try {
       const payload = {
         ...formData,
@@ -369,6 +386,20 @@ const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
                 <Calendar className="mr-2 h-4 w-4" />
                 Schedule All Semester Subjects
               </Button>
+              {schedules.length > 0 && (
+                <Button 
+                  onClick={() => {
+                    // Navigate to enrollment with exam event context
+                    const enrollmentUrl = `/enrollment?exam_event_id=${examEvent.id}&department=${encodeURIComponent(examEvent.department)}&semester=${examEvent.semester}`;
+                    window.location.href = enrollmentUrl;
+                  }}
+                  variant="default"
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Proceed to Student Enrollment
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -392,11 +423,21 @@ const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
                       <SelectValue placeholder="Select subject" />
                     </SelectTrigger>
                     <SelectContent>
-                      {subjects.map((subject: any) => (
-                        <SelectItem key={subject.id} value={subject.id.toString()}>
-                          {subject.subject_code} - {subject.subject_name} ({subject.credits} credits)
-                        </SelectItem>
-                      ))}
+                      {subjects.map((subject: any) => {
+                        const isAlreadyScheduled = schedules.some(schedule => 
+                          schedule.subject_id === subject.id
+                        );
+                        return (
+                          <SelectItem 
+                            key={subject.id} 
+                            value={subject.id.toString()}
+                            disabled={isAlreadyScheduled && !editingSchedule}
+                          >
+                            {subject.subject_code} - {subject.subject_name} ({subject.credits} credits)
+                            {isAlreadyScheduled && !editingSchedule && " (Already Scheduled)"}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                   {subjects.length === 0 && (
@@ -563,6 +604,7 @@ const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
             <BulkScheduleForm 
               examEvent={examEvent}
               subjects={subjects}
+              existingSchedules={schedules}
               onSuccess={() => {
                 setShowBulkSchedule(false);
                 fetchSchedules();
@@ -579,6 +621,11 @@ const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
           <CardTitle>Exam Timetable</CardTitle>
           <CardDescription>
             {schedules.length} subjects scheduled
+            {schedules.length > 0 && (
+              <span className="ml-2 text-green-600 font-medium">
+                • Ready for student enrollment
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -687,11 +734,12 @@ const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
 interface BulkScheduleFormProps {
   examEvent: ExamEvent;
   subjects: Subject[];
+  existingSchedules: ExamSchedule[];
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-const BulkScheduleForm = ({ examEvent, subjects, onSuccess, onCancel }: BulkScheduleFormProps) => {
+const BulkScheduleForm = ({ examEvent, subjects, existingSchedules, onSuccess, onCancel }: BulkScheduleFormProps) => {
   const { toast } = useToast();
   const [subjectSchedules, setSubjectSchedules] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -699,8 +747,15 @@ const BulkScheduleForm = ({ examEvent, subjects, onSuccess, onCancel }: BulkSche
   // Initialize subject schedules when component mounts
   useEffect(() => {
     console.log('Subjects received:', subjects); // Debug log
-    const initialSchedules = subjects.map((subject: any) => {
-      console.log('Processing subject:', subject); // Debug log
+    console.log('Existing schedules:', existingSchedules); // Debug log
+    
+    // Filter out subjects that are already scheduled
+    const unscheduledSubjects = subjects.filter((subject: any) => 
+      !existingSchedules.some(schedule => schedule.subject_id === subject.id)
+    );
+    
+    const initialSchedules = unscheduledSubjects.map((subject: any) => {
+      console.log('Processing unscheduled subject:', subject); // Debug log
       return {
         subject_id: subject.id,
         subject_name: subject.subject_name || subject.name || 'Unknown Subject',
@@ -715,9 +770,9 @@ const BulkScheduleForm = ({ examEvent, subjects, onSuccess, onCancel }: BulkSche
         special_instructions: ''
       };
     });
-    console.log('Initial schedules:', initialSchedules); // Debug log
+    console.log('Initial schedules for unscheduled subjects:', initialSchedules); // Debug log
     setSubjectSchedules(initialSchedules);
-  }, [subjects]);
+  }, [subjects, existingSchedules]);
 
   const updateSubjectSchedule = (index: number, field: string, value: any) => {
     const updated = [...subjectSchedules];
@@ -845,10 +900,22 @@ const BulkScheduleForm = ({ examEvent, subjects, onSuccess, onCancel }: BulkSche
         <div className="flex items-start gap-3">
           <BookOpen className="h-5 w-5 text-blue-600 mt-0.5" />
           <div>
-            <h4 className="font-semibold text-blue-800 mb-2">Semester Subjects ({subjects.length} subjects found)</h4>
+            <h4 className="font-semibold text-blue-800 mb-2">
+              Semester Subjects ({subjectSchedules.length} remaining to schedule)
+            </h4>
             <p className="text-sm text-blue-700">
               Assign exam dates and times for each subject in {examEvent.department} - Semester {examEvent.semester}
             </p>
+            {existingSchedules.length > 0 && (
+              <p className="text-sm text-green-700 mt-1">
+                ✓ {existingSchedules.length} subjects already scheduled
+              </p>
+            )}
+            {subjectSchedules.length === 0 && existingSchedules.length > 0 && (
+              <p className="text-sm text-green-700 font-medium mt-2">
+                All subjects have been scheduled! You can proceed to student enrollment.
+              </p>
+            )}
           </div>
         </div>
       </div>
