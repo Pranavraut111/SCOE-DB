@@ -26,7 +26,7 @@ interface ExamEvent {
   semester: number;
   start_date: string;
   end_date: string;
-  exam_type: 'IA' | 'OR' | 'ESE' | 'PRACTICAL' | 'VIVA';
+  exam_type: string;
   academic_year: string;
 }
 
@@ -64,9 +64,10 @@ interface Subject {
 
 interface ExamScheduleManagerProps {
   examEvent: ExamEvent;
+  onNavigateToEnrollment?: () => void;
 }
 
-const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
+const ExamScheduleManager = ({ examEvent, onNavigateToEnrollment }: ExamScheduleManagerProps) => {
   const { toast } = useToast();
   const [schedules, setSchedules] = useState<ExamSchedule[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -389,9 +390,13 @@ const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
               {schedules.length > 0 && (
                 <Button 
                   onClick={() => {
-                    // Navigate to enrollment with exam event context
-                    const enrollmentUrl = `/enrollment?exam_event_id=${examEvent.id}&department=${encodeURIComponent(examEvent.department)}&semester=${examEvent.semester}`;
-                    window.location.href = enrollmentUrl;
+                    if (onNavigateToEnrollment) {
+                      onNavigateToEnrollment();
+                    } else {
+                      // Fallback to URL navigation if callback not provided
+                      const enrollmentUrl = `/enrollment?exam_event_id=${examEvent.id}&department=${encodeURIComponent(examEvent.department)}&semester=${examEvent.semester}`;
+                      window.location.href = enrollmentUrl;
+                    }
                   }}
                   variant="default"
                   className="bg-green-600 hover:bg-green-700"

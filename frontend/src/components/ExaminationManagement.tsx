@@ -296,7 +296,10 @@ const ExaminationManagement = () => {
         {/* Schedule Tab */}
         <TabsContent value="schedule">
           {selectedEvent ? (
-            <ExamScheduleManager examEvent={selectedEvent} />
+            <ExamScheduleManager 
+              examEvent={selectedEvent} 
+              onNavigateToEnrollment={() => setActiveTab('enrollment')}
+            />
           ) : (
             <Card>
               <CardContent className="text-center py-8">
