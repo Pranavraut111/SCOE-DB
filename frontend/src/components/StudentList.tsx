@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Student } from '@/types/student';
 import { downloadCSV } from '@/utils/studentUtils';
@@ -147,24 +148,68 @@ const StudentList = () => {
     if (filteredStudents.length === 0) {
       toast({
         title: "No data to export",
-        description: "Please add some students first",
+        description: "Please add some students first or adjust your filters",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/students/export/csv');
-      if (!response.ok) {
-        throw new Error('Failed to export students');
-      }
-      
-      const blob = await response.blob();
+      // Create CSV content from filtered students
+      const headers = [
+        'First Name',
+        'Middle Name', 
+        'Last Name',
+        'Roll Number',
+        'Email',
+        'Phone',
+        'Date of Birth',
+        'Gender',
+        'Address',
+        'Year',
+        'Department',
+        'Category',
+        'Admission Number',
+        'Institutional Email',
+        'Mother Name'
+      ];
+
+      const csvContent = [
+        headers.join(','),
+        ...filteredStudents.map(student => [
+          `"${student.first_name || ''}"`,
+          `"${student.middle_name || ''}"`,
+          `"${student.last_name || ''}"`,
+          `"${student.roll_number || ''}"`,
+          `"${student.email || ''}"`,
+          `"${student.phone || ''}"`,
+          `"${student.date_of_birth || ''}"`,
+          `"${student.gender || ''}"`,
+          `"${student.address || ''}"`,
+          `"${student.state || ''}"`,
+          `"${student.department || ''}"`,
+          `"${student.category || ''}"`,
+          `"${student.admission_number || ''}"`,
+          `"${student.institutional_email || ''}"`,
+          `"${student.mother_name || ''}"`
+        ].join(','))
+      ].join('\n');
+
+      // Create and download the CSV file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = 'students.csv';
+      
+      // Generate filename with filter info
+      let filename = 'students';
+      if (searchTerm) filename += `_search-${searchTerm}`;
+      if (filterBranch !== 'all') filename += `_${filterBranch}`;
+      if (filterYear !== 'all') filename += `_${filterYear}`;
+      filename += '.csv';
+      
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -172,7 +217,7 @@ const StudentList = () => {
       
       toast({
         title: "Export successful",
-        description: "Students data has been exported to CSV",
+        description: `${filteredStudents.length} filtered students exported to CSV`,
       });
     } catch (error) {
       console.error('Export error:', error);
@@ -286,7 +331,7 @@ const StudentList = () => {
         </CardContent>
       </Card>
 
-      {/* Student Cards */}
+      {/* Student Table */}
       {filteredStudents.length === 0 ? (
         <Card className="shadow-card">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -303,114 +348,128 @@ const StudentList = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredStudents.map((student) => (
-            <Card key={student.id} className="group hover:shadow-hover transition-all duration-300 hover:-translate-y-1">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    {student.photo ? (
-                      <img 
-                        src={student.photo} 
-                        alt={student.name}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-border"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                        <span className="text-primary font-medium">
-                          {(student.first_name + ' ' + student.last_name).split(' ').map(n => n[0]).join('').slice(0, 2)}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      <CardTitle className="text-lg">{student.first_name} {student.last_name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{student.roll_number}</p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {student.state}
-                  </Badge>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Department:</span>
-                    <p className="font-medium truncate" title={student.department}>
-                      {student.department}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Year:</span>
-                    <p className="font-medium">{student.state}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Phone:</span>
-                    <p className="font-medium">{student.phone}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Category:</span>
-                    <p className="font-medium">{student.category?.toUpperCase() || 'General'}</p>
-                  </div>
-                </div>
-
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Email:</span>
-                  <p className="font-medium text-primary truncate" title={student.email}>
-                    {student.email}
-                  </p>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setSelectedStudent(student)}
-                  >
-                    <Eye className="mr-2 h-3 w-3" />
-                    View
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-primary hover:bg-primary/10"
-                    onClick={() => setEditingStudent(student)}
-                  >
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10">
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Student</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete {student.first_name} {student.last_name}? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDeleteStudent(student.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card className="shadow-card">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[60px]">Photo</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Roll Number</TableHead>
+                    <TableHead>Department</TableHead>
+                    <TableHead>Year</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredStudents.map((student) => (
+                    <TableRow key={student.id} className="hover:bg-muted/50">
+                      <TableCell>
+                        {student.photo ? (
+                          <img 
+                            src={student.photo} 
+                            alt={student.name}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-border"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                            <span className="text-primary font-medium text-sm">
+                              {(student.first_name + ' ' + student.last_name).split(' ').map(n => n[0]).join('').slice(0, 2)}
+                            </span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{student.first_name} {student.last_name}</div>
+                          {student.middle_name && (
+                            <div className="text-sm text-muted-foreground">{student.middle_name}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono">{student.roll_number}</TableCell>
+                      <TableCell>
+                        <div className="max-w-[150px] truncate" title={student.department}>
+                          {student.department}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">
+                          {student.state}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[200px] truncate text-primary" title={student.email}>
+                          {student.email}
+                        </div>
+                      </TableCell>
+                      <TableCell>{student.phone}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {student.category?.toUpperCase() || 'General'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedStudent(student)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-primary hover:bg-primary/10"
+                            onClick={() => setEditingStudent(student)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Student</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete {student.first_name} {student.last_name}? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteStudent(student.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Student Detail Modal */}

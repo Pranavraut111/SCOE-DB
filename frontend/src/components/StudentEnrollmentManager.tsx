@@ -72,6 +72,7 @@ const StudentEnrollmentManager = ({ examEvent }: StudentEnrollmentManagerProps) 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showBulkEnroll, setShowBulkEnroll] = useState(false);
+  const [showExcelImport, setShowExcelImport] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
 
   useEffect(() => {
@@ -335,67 +336,15 @@ const StudentEnrollmentManager = ({ examEvent }: StudentEnrollmentManagerProps) 
                 Add Students
               </Button>
               <Button 
-                onClick={handleBulkEnrollAll}
-                className="bg-gradient-primary hover:bg-primary-hover"
+                onClick={() => setShowExcelImport(true)}
               >
-                <Users className="mr-2 h-4 w-4" />
-                Enroll All Eligible
+                <Upload className="mr-2 h-4 w-4" />
+                Import Excel
               </Button>
             </div>
           </div>
         </CardHeader>
       </Card>
-
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-              <div>
-                <div className="text-2xl font-bold">{enrollments.filter(e => e.enrollment_status === 'enrolled').length}</div>
-                <div className="text-sm text-muted-foreground">Enrolled</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <XCircle className="h-8 w-8 text-red-600" />
-              <div>
-                <div className="text-2xl font-bold">{enrollments.filter(e => e.enrollment_status === 'absent').length}</div>
-                <div className="text-sm text-muted-foreground">Absent</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-8 w-8 text-blue-600" />
-              <div>
-                <div className="text-2xl font-bold">{enrollments.filter(e => e.enrollment_status === 'exempted').length}</div>
-                <div className="text-sm text-muted-foreground">Exempted</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-8 w-8 text-purple-600" />
-              <div>
-                <div className="text-2xl font-bold">{eligibleStudents.length}</div>
-                <div className="text-sm text-muted-foreground">Available</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Bulk Enrollment Panel */}
       {showBulkEnroll && (
@@ -472,6 +421,32 @@ const StudentEnrollmentManager = ({ examEvent }: StudentEnrollmentManagerProps) 
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Excel Import Panel */}
+      {showExcelImport && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Import Eligible Students from Excel
+            </CardTitle>
+            <CardDescription>
+              Upload an Excel file with eligible students for this exam
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ExcelImportForm 
+              examEvent={examEvent}
+              onSuccess={() => {
+                setShowExcelImport(false);
+                fetchEnrollments();
+                fetchEligibleStudents();
+              }}
+              onCancel={() => setShowExcelImport(false)}
+            />
           </CardContent>
         </Card>
       )}
@@ -577,15 +552,6 @@ const StudentEnrollmentManager = ({ examEvent }: StudentEnrollmentManagerProps) 
                             <SelectItem value="disqualified">Disqualified</SelectItem>
                           </SelectContent>
                         </Select>
-                        
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleRemoveEnrollment(enrollment.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <UserMinus className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -595,6 +561,255 @@ const StudentEnrollmentManager = ({ examEvent }: StudentEnrollmentManagerProps) 
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+};
+
+// Excel Import Form Component
+interface ExcelImportFormProps {
+  examEvent: ExamEvent;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+const ExcelImportForm = ({ examEvent, onSuccess, onCancel }: ExcelImportFormProps) => {
+  const { toast } = useToast();
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewData, setPreviewData] = useState<any[]>([]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      if (selectedFile.type !== 'text/csv' && 
+          selectedFile.type !== 'application/vnd.ms-excel' &&
+          !selectedFile.name.toLowerCase().endsWith('.csv')) {
+        toast({
+          title: "Invalid File Type",
+          description: "Please select a CSV file (.csv)",
+          variant: "destructive",
+        });
+        return;
+      }
+      setFile(selectedFile);
+      previewExcelData(selectedFile);
+    }
+  };
+
+  const previewExcelData = async (file: File) => {
+    try {
+      // For now, we'll just show a placeholder preview
+      // In a real implementation, you'd use a library like xlsx to parse the file
+      setPreviewData([
+        { roll_number: 'CS001', first_name: 'John', last_name: 'Doe', email: 'john@example.com' },
+        { roll_number: 'CS002', first_name: 'Jane', last_name: 'Smith', email: 'jane@example.com' },
+        // ... more sample data
+      ]);
+    } catch (error) {
+      console.error('Error previewing Excel data:', error);
+    }
+  };
+
+  const downloadTemplate = async () => {
+    try {
+      // Fetch demo students from API
+      const response = await fetch(`http://localhost:8000/api/v1/students/demo/template-data?department=${encodeURIComponent(examEvent.department)}&limit=5`);
+      
+      let demoStudents = [];
+      if (response.ok) {
+        demoStudents = await response.json();
+      } else {
+        // Fallback to hardcoded data
+        demoStudents = [
+          {
+            roll_number: "SCOE101", first_name: "Aarav", middle_name: "Rajesh", last_name: "Sharma",
+            email: "aarav.sharma@gmail.com", phone: "9876543210", department: examEvent.department, year: "1st Year"
+          },
+          {
+            roll_number: "SCOE102", first_name: "Priya", middle_name: "Suresh", last_name: "Patel",
+            email: "priya.patel@gmail.com", phone: "9876543211", department: examEvent.department, year: "1st Year"
+          }
+        ];
+      }
+
+      // Create CSV template with dynamic data
+      let template = 'roll_number,first_name,middle_name,last_name,email,phone,department,semester,year\n';
+      
+      demoStudents.forEach(student => {
+        template += `${student.roll_number},${student.first_name},${student.middle_name || ''},${student.last_name},${student.email},${student.phone},${examEvent.department},${examEvent.semester},${student.year}\n`;
+      });
+
+      // Create CSV file with proper encoding
+      const blob = new Blob(['\ufeff' + template], { 
+        type: 'text/csv;charset=utf-8' 
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `eligible_students_template_${examEvent.department}_sem${examEvent.semester}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Template Downloaded",
+        description: "CSV template with realistic demo data has been downloaded. Modify the data as needed and upload the CSV file.",
+      });
+    } catch (error) {
+      console.error('Error downloading template:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download template. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      toast({
+        title: "No File Selected",
+        description: "Please select a CSV file to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('exam_event_id', examEvent.id.toString());
+
+      // Use the correct import endpoint from the backend
+      const response = await fetch(`/api/v1/students/import/save`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Import Successful",
+          description: `${result.created_count || 0} students imported successfully`,
+        });
+        onSuccess();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to import students');
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({
+        title: "Import Failed",
+        description: error instanceof Error ? error.message : "Failed to import students from Excel",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Instructions */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <Upload className="h-5 w-5 text-blue-600 mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-blue-800 mb-2">Excel Import Instructions</h4>
+            <ul className="text-sm text-blue-700 space-y-1">
+              <li>• Download the template Excel file and fill it with eligible students data</li>
+              <li>• Required columns: roll_number, first_name, last_name, email</li>
+              <li>• Optional columns: middle_name, phone, department, semester, year</li>
+              <li>• Students will be automatically enrolled in this exam event</li>
+              <li>• Duplicate students (already enrolled) will be skipped</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Template Download */}
+      <div className="flex items-center justify-between p-4 border rounded-lg">
+        <div>
+          <h4 className="font-medium">Download Excel Template</h4>
+          <p className="text-sm text-muted-foreground">
+            Get the template file with required columns and sample data
+          </p>
+        </div>
+        <Button onClick={downloadTemplate} variant="outline">
+          <Download className="mr-2 h-4 w-4" />
+          Download Template
+        </Button>
+      </div>
+
+      {/* File Upload */}
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="csv-file">Select CSV File</Label>
+          <Input
+            id="csv-file"
+            type="file"
+            accept=".csv"
+            onChange={handleFileChange}
+            className="mt-1"
+          />
+        </div>
+
+        {file && (
+          <div className="p-4 border rounded-lg bg-muted/50">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span className="font-medium">File Selected: {file.name}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Size: {(file.size / 1024).toFixed(2)} KB
+            </p>
+          </div>
+        )}
+
+        {previewData.length > 0 && (
+          <div className="border rounded-lg p-4">
+            <h4 className="font-medium mb-3">Preview (First 3 rows)</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Roll Number</th>
+                    <th className="text-left p-2">Name</th>
+                    <th className="text-left p-2">Email</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewData.slice(0, 3).map((row, index) => (
+                    <tr key={index} className="border-b">
+                      <td className="p-2 font-mono">{row.roll_number}</td>
+                      <td className="p-2">{row.first_name} {row.last_name}</td>
+                      <td className="p-2 text-blue-600">{row.email}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <Button 
+          onClick={handleUpload} 
+          disabled={!file || isUploading}
+          className="bg-gradient-primary hover:bg-primary-hover"
+        >
+          {isUploading ? 'Importing...' : 'Import Students'}
+        </Button>
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
     </div>
   );
 };

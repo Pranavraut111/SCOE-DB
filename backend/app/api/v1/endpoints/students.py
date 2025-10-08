@@ -51,25 +51,37 @@ def create_student(
 @router.get("/import/template-new")
 def download_new_template():
     """
-    Download Excel template for bulk import with proper structure
+    Download Excel template for bulk import with proper structure and sample data
     """
     import pandas as pd
     from io import BytesIO
     from fastapi.responses import StreamingResponse
     
-    # Create empty template with just headers - no sample data to avoid confusion
+    # Create template with sample data from Computer Engineering students
     template_data = {
-        'First Name': [],
-        'Middle Name': [],
-        'Last Name': [],
-        'Address': [],
-        'Gender': [],  # Male/Female
-        'Category': [],  # General/OBC/SC/ST
-        'Date of Birth': [],  # YYYY-MM-DD format
-        'Phone Number': [],
-        'Branch': [],  # Computer Science Engineering, Information Technology, etc.
-        'Year': [],  # 1st Year, 2nd Year, 3rd Year, 4th Year
-        'Mother Name': []
+        'First Name': ['Aarav', 'Priya', 'Arjun', 'Sneha', 'Rohan'],
+        'Middle Name': ['Rajesh', 'Suresh', 'Vikram', 'Anil', 'Prakash'],
+        'Last Name': ['Sharma', 'Patel', 'Singh', 'Deshmukh', 'Kulkarni'],
+        'Address': [
+            '123 MG Road, Pune',
+            '456 FC Road, Pune', 
+            '789 JM Road, Pune',
+            '321 Karve Road, Pune',
+            '654 Baner Road, Pune'
+        ],
+        'Gender': ['Male', 'Female', 'Male', 'Female', 'Male'],
+        'Category': ['General', 'OBC', 'General', 'SC', 'General'],
+        'Date of Birth': ['2005-03-15', '2005-07-22', '2005-01-10', '2005-09-05', '2005-11-18'],
+        'Phone Number': ['9876543210', '9876543211', '9876543212', '9876543213', '9876543214'],
+        'Branch': [
+            'Computer Science Engineering',
+            'Computer Science Engineering', 
+            'Computer Science Engineering',
+            'Computer Science Engineering',
+            'Computer Science Engineering'
+        ],
+        'Year': ['1st Year', '1st Year', '1st Year', '1st Year', '1st Year'],
+        'Mother Name': ['Priya Sharma', 'Sunita Patel', 'Kavita Singh', 'Mangala Deshmukh', 'Shobha Kulkarni']
     }
     
     df = pd.DataFrame(template_data)
@@ -104,7 +116,7 @@ def download_new_template():
     return StreamingResponse(
         BytesIO(output.read()),
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        headers={"Content-Disposition": "attachment; filename=student_bulk_import_template_v2.xlsx", "Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
+        headers={"Content-Disposition": "attachment; filename=student_bulk_import_template_with_demo_data.xlsx", "Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
     )
 
 @router.post("/import/preview")
@@ -726,3 +738,61 @@ def delete_student(
             detail="Student not found"
         )
     return crud_student.delete_student(db=db, student_id=student_id)
+
+@router.get("/demo/template-data")
+def get_demo_students_for_template(
+    db: Session = Depends(get_db),
+    department: str = Query("Computer Engineering", description="Department to filter demo students"),
+    limit: int = Query(5, description="Number of demo students to return")
+):
+    """
+    Get demo students data for template generation
+    """
+    from app.models.student import Student
+    
+    # Get demo students from database
+    demo_students = db.query(Student).filter(
+        Student.department == department,
+        Student.roll_number.like("SCOE%")
+    ).limit(limit).all()
+    
+    if not demo_students:
+        # Fallback to hardcoded data if no demo students in DB
+        return [
+            {
+                "roll_number": "SCOE101",
+                "first_name": "Aarav",
+                "middle_name": "Rajesh", 
+                "last_name": "Sharma",
+                "email": "aarav.sharma@gmail.com",
+                "phone": "9876543210",
+                "department": department,
+                "year": "1st Year"
+            },
+            {
+                "roll_number": "SCOE102",
+                "first_name": "Priya",
+                "middle_name": "Suresh",
+                "last_name": "Patel", 
+                "email": "priya.patel@gmail.com",
+                "phone": "9876543211",
+                "department": department,
+                "year": "1st Year"
+            }
+        ]
+    
+    # Convert to template format
+    template_data = []
+    for student in demo_students:
+        template_data.append({
+            "roll_number": student.roll_number,
+            "first_name": student.first_name,
+            "middle_name": student.middle_name,
+            "last_name": student.last_name,
+            "email": student.email,
+            "phone": student.phone,
+            "department": student.department,
+            "year": "1st Year"  # Default for demo students
+        })
+    
+    return template_data

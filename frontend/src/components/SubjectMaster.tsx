@@ -169,11 +169,31 @@ const SubjectMaster = () => {
 
   const handleSubmit = async () => {
     try {
+      // Validation for required fields
+      if (!formData.subject_code || !formData.subject_name) {
+        toast({
+          title: "Validation Error",
+          description: "Subject code and subject name are required fields",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isCustomSubject && (!formData.subject_code.trim() || !formData.subject_name.trim())) {
+        toast({
+          title: "Validation Error",
+          description: "Please enter both subject code and subject name for custom subjects",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const method = editingSubject ? 'PUT' : 'POST';
       const url = editingSubject ? `http://localhost:8000/api/v1/subjects/${editingSubject.id}` : 'http://localhost:8000/api/v1/subjects/';
       
       console.log('Submitting data:', formData);
       console.log('Edit mode:', !!editingSubject);
+      console.log('Is custom subject:', isCustomSubject);
       
       // Ensure all required fields are present
       const submitData = {
@@ -394,9 +414,28 @@ const SubjectMaster = () => {
                 <Checkbox 
                   id="custom-subject"
                   checked={isCustomSubject}
-                  onCheckedChange={(checked) => setIsCustomSubject(checked === true)}
+                  onCheckedChange={(checked) => {
+                    const isChecked = checked === true;
+                    setIsCustomSubject(isChecked);
+                    // Clear subject fields when switching modes
+                    if (isChecked) {
+                      setFormData(prev => ({
+                        ...prev,
+                        subject_code: '',
+                        subject_name: '',
+                        components: []
+                      }));
+                    } else {
+                      setFormData(prev => ({
+                        ...prev,
+                        subject_code: '',
+                        subject_name: '',
+                        components: []
+                      }));
+                    }
+                  }}
                 />
-                <Label htmlFor="custom-subject">Custom Subject (not from catalog)</Label>
+                <Label htmlFor="custom-subject" className="cursor-pointer">Custom Subject (not from catalog)</Label>
               </div>
               
               {!isCustomSubject ? (
@@ -420,24 +459,49 @@ const SubjectMaster = () => {
                   </Select>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="subject-code">Subject Code</Label>
-                    <Input
-                      id="subject-code"
-                      value={formData.subject_code || ''}
-                      onChange={(e) => handleFormChange('subject_code', e.target.value)}
-                      placeholder="e.g., CEC501"
-                    />
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <BookOpen className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">Custom Subject Entry</span>
+                    </div>
+                    <p className="text-sm text-blue-700">
+                      Enter details for a subject that is not available in the catalog
+                    </p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="custom-subject-name">Subject Name</Label>
-                    <Input
-                      id="custom-subject-name"
-                      value={formData.subject_name || ''}
-                      onChange={(e) => handleFormChange('subject_name', e.target.value)}
-                      placeholder="Enter custom subject name"
-                    />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="subject-code" className="text-sm font-medium">
+                        Subject Code <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="subject-code"
+                        value={formData.subject_code || ''}
+                        onChange={(e) => handleFormChange('subject_code', e.target.value.toUpperCase())}
+                        placeholder="e.g., CEC501, IT301"
+                        className="font-mono"
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter the official subject code (will be converted to uppercase)
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="custom-subject-name" className="text-sm font-medium">
+                        Subject Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="custom-subject-name"
+                        value={formData.subject_name || ''}
+                        onChange={(e) => handleFormChange('subject_name', e.target.value)}
+                        placeholder="e.g., Advanced Database Systems"
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter the full subject name
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}

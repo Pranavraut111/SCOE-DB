@@ -26,6 +26,8 @@ interface ExamEvent {
   semester: number;
   start_date: string;
   end_date: string;
+  exam_type: 'IA' | 'OR' | 'ESE' | 'PRACTICAL' | 'VIVA';
+  academic_year: string;
 }
 
 interface ExamSchedule {
@@ -70,6 +72,7 @@ const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showBulkSchedule, setShowBulkSchedule] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<ExamSchedule | null>(null);
   const [formData, setFormData] = useState({
     subject_id: '',
@@ -297,8 +300,19 @@ const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
   };
 
   const getSubjectName = (subjectId: number) => {
-    const subject = subjects.find(s => s.id === subjectId);
-    return subject ? `${subject.code} - ${subject.name}` : `Subject ID: ${subjectId}`;
+    const subject = subjects.find(s => s.id === subjectId) as any;
+    console.log('Looking for subject ID:', subjectId);
+    console.log('Available subjects:', subjects);
+    console.log('Found subject:', subject);
+    
+    if (subject) {
+      // Try different property combinations since API might return different field names
+      const code = subject.subject_code || subject.code || 'N/A';
+      const name = subject.subject_name || subject.name || 'Unknown Subject';
+      console.log('Subject code:', code, 'Subject name:', name);
+      return `${code} - ${name}`;
+    }
+    return `Subject ID: ${subjectId}`;
   };
 
   return (
@@ -309,23 +323,53 @@ const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
+                <Calendar className="h-5 w-5" />
                 Exam Schedule - {examEvent.name}
               </CardTitle>
               <CardDescription>
-                Manage exam timetable and subject schedules
+                Manage exam timetable and subject schedules for {examEvent.department} - Semester {examEvent.semester}
               </CardDescription>
             </div>
-            <Button 
-              onClick={() => {
-                resetForm();
-                setShowAddForm(true);
-              }}
-              className="bg-gradient-primary hover:bg-primary-hover"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Subject to Schedule
-            </Button>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">
+                {new Date(examEvent.start_date).toLocaleDateString()} - {new Date(examEvent.end_date).toLocaleDateString()}
+              </Badge>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.location.reload()}
+              >
+                Back to Events
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Action Buttons */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Schedule Management</CardTitle>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => {
+                  resetForm();
+                  setShowAddForm(true);
+                }}
+                variant="outline"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Individual Subject
+              </Button>
+              <Button 
+                onClick={() => setShowBulkSchedule(true)}
+                className="bg-gradient-primary hover:bg-primary-hover"
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                Schedule All Semester Subjects
+              </Button>
+            </div>
           </div>
         </CardHeader>
       </Card>
@@ -503,6 +547,32 @@ const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
         </Card>
       )}
 
+      {/* Bulk Schedule Form */}
+      {showBulkSchedule && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Schedule All Semester Subjects
+            </CardTitle>
+            <CardDescription>
+              Create exam schedule for all subjects in {examEvent.department} - Semester {examEvent.semester}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BulkScheduleForm 
+              examEvent={examEvent}
+              subjects={subjects}
+              onSuccess={() => {
+                setShowBulkSchedule(false);
+                fetchSchedules();
+              }}
+              onCancel={() => setShowBulkSchedule(false)}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Schedule List */}
       <Card>
         <CardHeader>
@@ -609,6 +679,279 @@ const ExamScheduleManager = ({ examEvent }: ExamScheduleManagerProps) => {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+};
+
+// Bulk Schedule Form Component
+interface BulkScheduleFormProps {
+  examEvent: ExamEvent;
+  subjects: Subject[];
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+const BulkScheduleForm = ({ examEvent, subjects, onSuccess, onCancel }: BulkScheduleFormProps) => {
+  const { toast } = useToast();
+  const [subjectSchedules, setSubjectSchedules] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Initialize subject schedules when component mounts
+  useEffect(() => {
+    console.log('Subjects received:', subjects); // Debug log
+    const initialSchedules = subjects.map((subject: any) => {
+      console.log('Processing subject:', subject); // Debug log
+      return {
+        subject_id: subject.id,
+        subject_name: subject.subject_name || subject.name || 'Unknown Subject',
+        subject_code: subject.subject_code || subject.code || 'N/A',
+        exam_date: '',
+        start_time: '09:00',
+        duration_minutes: 180,
+        venue: '',
+        supervisor: '',
+        total_marks: 100,
+        materials_allowed: '',
+        special_instructions: ''
+      };
+    });
+    console.log('Initial schedules:', initialSchedules); // Debug log
+    setSubjectSchedules(initialSchedules);
+  }, [subjects]);
+
+  const updateSubjectSchedule = (index: number, field: string, value: any) => {
+    const updated = [...subjectSchedules];
+    updated[index] = { ...updated[index], [field]: value };
+    
+    // Auto-calculate end time when start time or duration changes
+    if (field === 'start_time' || field === 'duration_minutes') {
+      const startTime = field === 'start_time' ? value : updated[index].start_time;
+      const duration = field === 'duration_minutes' ? parseInt(value) : updated[index].duration_minutes;
+      
+      if (startTime && duration) {
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const startMinutes = hours * 60 + minutes;
+        const endMinutes = startMinutes + duration;
+        const endHours = Math.floor(endMinutes / 60);
+        const endMins = endMinutes % 60;
+        
+        updated[index].end_time = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+      }
+    }
+    
+    setSubjectSchedules(updated);
+  };
+
+  const handleSubmit = async () => {
+    // Validate that all required fields are filled
+    const incompleteSubjects = subjectSchedules.filter(schedule => 
+      !schedule.exam_date || !schedule.start_time
+    );
+
+    if (incompleteSubjects.length > 0) {
+      toast({
+        title: "Incomplete Schedule",
+        description: `Please fill exam date and time for all subjects. ${incompleteSubjects.length} subjects are incomplete.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      // Create schedules one by one since bulk endpoint doesn't exist
+      for (const schedule of subjectSchedules) {
+        try {
+          // Calculate end_time if not already calculated
+          let endTime = schedule.end_time;
+          if (!endTime && schedule.start_time && schedule.duration_minutes) {
+            const [hours, minutes] = schedule.start_time.split(':').map(Number);
+            const startMinutes = hours * 60 + minutes;
+            const endMinutes = startMinutes + schedule.duration_minutes;
+            const endHours = Math.floor(endMinutes / 60);
+            const endMins = endMinutes % 60;
+            endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+          }
+
+          const payload = {
+            exam_event_id: examEvent.id, // Required by ExamScheduleCreate schema
+            subject_id: schedule.subject_id,
+            exam_date: schedule.exam_date,
+            start_time: schedule.start_time,
+            end_time: endTime,
+            duration_minutes: schedule.duration_minutes,
+            venue: schedule.venue || `Room A-${Math.floor(Math.random() * 100) + 101}`,
+            max_students: 60,
+            supervisor: schedule.supervisor || '',
+            total_marks: schedule.total_marks,
+            theory_marks: schedule.total_marks,
+            practical_marks: 0,
+            special_instructions: schedule.special_instructions || '',
+            materials_allowed: schedule.materials_allowed || ''
+          };
+
+          console.log('Sending payload for', schedule.subject_code, ':', payload);
+
+          const response = await fetch(`/api/v1/exams/events/${examEvent.id}/schedules/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            errorCount++;
+            const errorText = await response.text();
+            console.error(`Failed to schedule ${schedule.subject_code}:`, errorText);
+            console.error('Response status:', response.status);
+          }
+        } catch (error) {
+          errorCount++;
+          console.error(`Error scheduling ${schedule.subject_code}:`, error);
+        }
+      }
+
+      if (successCount > 0) {
+        toast({
+          title: "Schedule Created",
+          description: `Successfully scheduled ${successCount} subjects. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
+        });
+        onSuccess();
+      } else {
+        throw new Error('Failed to schedule any subjects');
+      }
+    } catch (error) {
+      console.error('Schedule creation error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create schedule",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <BookOpen className="h-5 w-5 text-blue-600 mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-blue-800 mb-2">Semester Subjects ({subjects.length} subjects found)</h4>
+            <p className="text-sm text-blue-700">
+              Assign exam dates and times for each subject in {examEvent.department} - Semester {examEvent.semester}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Subject List */}
+      <div className="space-y-4">
+        {subjectSchedules.map((schedule, index) => (
+          <Card key={schedule.subject_id} className="border-l-4 border-l-primary">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+                {/* Subject Info */}
+                <div className="lg:col-span-3">
+                  <h4 className="font-semibold text-lg">
+                    {schedule.subject_code || 'N/A'}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {schedule.subject_name || 'Subject Name Not Available'}
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    Subject ID: {schedule.subject_id}
+                  </p>
+                </div>
+
+                {/* Date & Time */}
+                <div className="lg:col-span-2">
+                  <Label className="text-xs">Exam Date *</Label>
+                  <Input
+                    type="date"
+                    value={schedule.exam_date}
+                    onChange={(e) => updateSubjectSchedule(index, 'exam_date', e.target.value)}
+                    min={examEvent.start_date}
+                    max={examEvent.end_date}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div className="lg:col-span-2">
+                  <Label className="text-xs">Start Time *</Label>
+                  <Input
+                    type="time"
+                    value={schedule.start_time}
+                    onChange={(e) => updateSubjectSchedule(index, 'start_time', e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div className="lg:col-span-1">
+                  <Label className="text-xs">Duration (min)</Label>
+                  <Input
+                    type="number"
+                    min="60"
+                    max="480"
+                    value={schedule.duration_minutes}
+                    onChange={(e) => updateSubjectSchedule(index, 'duration_minutes', e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div className="lg:col-span-2">
+                  <Label className="text-xs">Venue</Label>
+                  <Input
+                    value={schedule.venue}
+                    onChange={(e) => updateSubjectSchedule(index, 'venue', e.target.value)}
+                    placeholder="Room A-101"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div className="lg:col-span-2">
+                  <Label className="text-xs">Supervisor</Label>
+                  <Input
+                    value={schedule.supervisor}
+                    onChange={(e) => updateSubjectSchedule(index, 'supervisor', e.target.value)}
+                    placeholder="Supervisor name"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              
+              {/* End time display */}
+              {schedule.end_time && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  End Time: {schedule.end_time}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <Button 
+          onClick={handleSubmit} 
+          disabled={isSubmitting || subjectSchedules.length === 0}
+          className="bg-gradient-primary hover:bg-primary-hover"
+        >
+          {isSubmitting ? 'Creating Schedule...' : `Schedule All ${subjectSchedules.length} Subjects`}
+        </Button>
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
     </div>
   );
 };
