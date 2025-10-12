@@ -35,7 +35,7 @@ def get_students(
 
 def create_student(db: Session, student: StudentCreate) -> DBStudent:
     full_name = f"{student.first_name} {student.middle_name} {student.last_name}".strip()
-    roll_number = student.roll_number or generate_roll_number("", student.state or "")
+    roll_number = student.roll_number or generate_roll_number(student.department or "", getattr(student, 'admission_year', 2024))
     institutional_email = student.institutional_email or generate_institutional_email(full_name, student.department or "dept")
     db_student = DBStudent(
         first_name=student.first_name,
@@ -54,7 +54,9 @@ def create_student(db: Session, student: StudentCreate) -> DBStudent:
         roll_number=roll_number,
         institutional_email=institutional_email,
         department=student.department,
-        category=student.category
+        category=student.category,
+        current_semester=getattr(student, 'current_semester', 1),
+        admission_year=getattr(student, 'admission_year', 2024)
     )
     db.add(db_student)
     db.commit()

@@ -2,9 +2,23 @@ from datetime import datetime
 import random
 import re
 
-def generate_roll_number(_: str = "", __: str = "") -> str:
-    number = random.randint(0, 9999)
-    return f"SCOE{str(number).zfill(4)}"
+def generate_roll_number(department: str = "", admission_year: int = 2024) -> str:
+    """
+    Generate roll number in format: SCOE + Year + Sequential
+    Example: SCOE1001 (1st year, student #001)
+    """
+    # Determine year digit based on admission year
+    current_year = 2024
+    year_digit = current_year - admission_year + 1
+    if year_digit < 1:
+        year_digit = 1
+    elif year_digit > 4:
+        year_digit = 4
+    
+    # Generate sequential number (001-999)
+    sequential = random.randint(1, 999)
+    
+    return f"SCOE{year_digit}{sequential:03d}"
 
 def generate_institutional_email(full_name: str, department: str) -> str:
     """Generate institutional email based on name and department"""

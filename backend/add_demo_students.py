@@ -7,7 +7,7 @@ from datetime import date
 sys.path.append(str(Path(__file__).parent))
 
 from app.db.session import SessionLocal
-from app.models.student import Student, Gender
+from app.models.student import Student, Gender, AcademicStatus
 from sqlalchemy.exc import IntegrityError
 
 logging.basicConfig(level=logging.INFO)
@@ -21,11 +21,12 @@ def add_demo_students():
             "first_name": "Aarav", "middle_name": "Rajesh", "last_name": "Sharma",
             "email": "aarav.sharma@gmail.com", "phone": "9876543210",
             "date_of_birth": date(2005, 3, 15), "gender": Gender.MALE,
-            "address": "123 MG Road, Pune", "state": "Maharashtra", "country": "India",
+            "address": "123 MG Road, Pune", "state": "1st Year", "country": "India",
             "postal_code": "411001", "admission_number": "SCOE2024001",
             "roll_number": "SCOE101", "institutional_email": "aarav.sharma@scoe.edu.in",
             "department": "Computer Engineering", "category": "General",
-            "mother_name": "Priya Sharma"
+            "mother_name": "Priya Sharma", "current_semester": 2, "admission_year": 2024,
+            "academic_status": AcademicStatus.ACTIVE
         },
         {
             "first_name": "Priya", "middle_name": "Suresh", "last_name": "Patel",

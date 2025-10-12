@@ -598,22 +598,90 @@ const ExcelImportForm = ({ examEvent, onSuccess, onCancel }: ExcelImportFormProp
 
   const previewExcelData = async (file: File) => {
     try {
-      // For now, we'll just show a placeholder preview
-      // In a real implementation, you'd use a library like xlsx to parse the file
-      setPreviewData([
-        { roll_number: 'CS001', first_name: 'John', last_name: 'Doe', email: 'john@example.com' },
-        { roll_number: 'CS002', first_name: 'Jane', last_name: 'Smith', email: 'jane@example.com' },
-        // ... more sample data
-      ]);
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      // Parse CSV data
+      const csvData = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        if (values.length >= 3 && values[0]) { // Must have roll_number
+          const row = {
+            roll_number: values[0],
+            first_name: values[1] || '',
+            last_name: values[2] || '',
+            current_semester: values[3] ? parseInt(values[3]) : null,
+            department: values[4] || '',
+            email: values[5] || '',
+            isValid: false // Will be validated below
+          };
+          csvData.push(row);
+        }
+      }
+      
+      // Validate students against database
+      const validatedData = await validateStudentsInDatabase(csvData);
+      setPreviewData(validatedData);
+      
     } catch (error) {
-      console.error('Error previewing Excel data:', error);
+      console.error('Error previewing CSV data:', error);
+      toast({
+        title: "Preview Error",
+        description: "Failed to preview CSV file. Please check the format.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const validateStudentsInDatabase = async (students: any[]) => {
+    try {
+      // Get all students from database for validation
+      const response = await fetch('/api/v1/students/');
+      if (!response.ok) {
+        throw new Error('Failed to fetch students from database');
+      }
+      
+      const allStudents = await response.json();
+      
+      // Create a map for quick lookup
+      const studentMap = new Map();
+      allStudents.forEach((student: any) => {
+        studentMap.set(student.roll_number.toLowerCase(), {
+          id: student.id,
+          email: student.email,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          department: student.department
+        });
+      });
+      
+      // Validate each student in the CSV
+      return students.map(student => {
+        const dbStudent = studentMap.get(student.roll_number.toLowerCase());
+        return {
+          ...student,
+          isValid: !!dbStudent,
+          email: dbStudent?.email || student.email,
+          dbId: dbStudent?.id,
+          department: dbStudent?.department
+        };
+      });
+      
+    } catch (error) {
+      console.error('Error validating students:', error);
+      // Return students with validation failed
+      return students.map(student => ({
+        ...student,
+        isValid: false
+      }));
     }
   };
 
   const downloadTemplate = async () => {
     try {
       // Fetch demo students from API
-      const response = await fetch(`http://localhost:8000/api/v1/students/demo/template-data?department=${encodeURIComponent(examEvent.department)}&limit=5`);
+      const response = await fetch(`/api/v1/students/demo/template-data?department=${encodeURIComponent(examEvent.department)}&limit=5`);
       
       let demoStudents = [];
       if (response.ok) {
@@ -632,12 +700,15 @@ const ExcelImportForm = ({ examEvent, onSuccess, onCancel }: ExcelImportFormProp
         ];
       }
 
-      // Create CSV template with dynamic data
-      let template = 'roll_number,first_name,middle_name,last_name,email,phone,department,semester,year\n';
+      // Create simplified CSV template with essential columns
+      let template = 'roll_number,first_name,last_name,current_semester,department\n';
       
-      demoStudents.forEach(student => {
-        template += `${student.roll_number},${student.first_name},${student.middle_name || ''},${student.last_name},${student.email},${student.phone},${examEvent.department},${examEvent.semester},${student.year}\n`;
-      });
+      // Add empty rows for teachers to fill
+      template += ',,,,\n'; // Empty row 1
+      template += ',,,,\n'; // Empty row 2
+      template += ',,,,\n'; // Empty row 3
+      template += ',,,,\n'; // Empty row 4
+      template += ',,,,\n'; // Empty row 5
 
       // Create CSV file with proper encoding
       const blob = new Blob(['\ufeff' + template], { 
@@ -668,7 +739,7 @@ const ExcelImportForm = ({ examEvent, onSuccess, onCancel }: ExcelImportFormProp
   };
 
   const handleUpload = async () => {
-    if (!file) {
+    if (!file || previewData.length === 0) {
       toast({
         title: "No File Selected",
         description: "Please select a CSV file to upload",
@@ -677,28 +748,71 @@ const ExcelImportForm = ({ examEvent, onSuccess, onCancel }: ExcelImportFormProp
       return;
     }
 
+    const validStudents = previewData.filter(student => student.isValid);
+    const invalidStudents = previewData.filter(student => !student.isValid);
+
+    if (validStudents.length === 0) {
+      toast({
+        title: "No Valid Students",
+        description: "No valid students found in the file. Please check the roll numbers.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('exam_event_id', examEvent.id.toString());
+      // Enroll only valid students directly
+      let successCount = 0;
+      let errorCount = 0;
 
-      // Use the correct import endpoint from the backend
-      const response = await fetch(`/api/v1/students/import/save`, {
-        method: 'POST',
-        body: formData,
+      for (const student of validStudents) {
+        try {
+          const enrollmentData = {
+            exam_event_id: examEvent.id,
+            student_id: student.dbId,
+            enrollment_status: 'enrolled',
+            enrollment_date: new Date().toISOString().split('T')[0],
+            is_backlog_student: false,
+            notes: `Imported via CSV on ${new Date().toLocaleDateString()}`
+          };
+
+          const response = await fetch(`/api/v1/exams/events/${examEvent.id}/enrollments/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(enrollmentData),
+          });
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            errorCount++;
+            console.error(`Failed to enroll ${student.roll_number}`);
+          }
+        } catch (error) {
+          errorCount++;
+          console.error(`Error enrolling ${student.roll_number}:`, error);
+        }
+      }
+
+      let message = `${successCount} valid students enrolled successfully`;
+      if (invalidStudents.length > 0) {
+        message += `. ${invalidStudents.length} invalid students skipped`;
+      }
+      if (errorCount > 0) {
+        message += `. ${errorCount} students failed to enroll`;
+      }
+
+      toast({
+        title: "Import Completed",
+        description: message,
+        variant: successCount > 0 ? "default" : "destructive",
       });
-
-      if (response.ok) {
-        const result = await response.json();
-        toast({
-          title: "Import Successful",
-          description: `${result.created_count || 0} students imported successfully`,
-        });
+      
+      if (successCount > 0) {
         onSuccess();
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to import students');
       }
     } catch (error) {
       console.error('Import error:', error);
@@ -721,11 +835,12 @@ const ExcelImportForm = ({ examEvent, onSuccess, onCancel }: ExcelImportFormProp
           <div>
             <h4 className="font-semibold text-blue-800 mb-2">Excel Import Instructions</h4>
             <ul className="text-sm text-blue-700 space-y-1">
-              <li>• Download the template Excel file and fill it with eligible students data</li>
-              <li>• Required columns: roll_number, first_name, last_name, email</li>
-              <li>• Optional columns: middle_name, phone, department, semester, year</li>
-              <li>• Students will be automatically enrolled in this exam event</li>
-              <li>• Duplicate students (already enrolled) will be skipped</li>
+              <li>• Download the simple template with essential columns</li>
+              <li>• Required columns: <strong>roll_number, first_name, last_name, current_semester, department</strong></li>
+              <li>• Add students who meet your exam criteria (attendance, eligibility, etc.)</li>
+              <li>• System will validate if students exist in database</li>
+              <li>• Only valid students will be enrolled automatically</li>
+              <li>• Invalid entries will be highlighted for review</li>
             </ul>
           </div>
         </div>
@@ -736,7 +851,7 @@ const ExcelImportForm = ({ examEvent, onSuccess, onCancel }: ExcelImportFormProp
         <div>
           <h4 className="font-medium">Download Excel Template</h4>
           <p className="text-sm text-muted-foreground">
-            Get the template file with required columns and sample data
+            Essential columns: Roll Number, Name, Current Semester, Department
           </p>
         </div>
         <Button onClick={downloadTemplate} variant="outline">
@@ -772,26 +887,54 @@ const ExcelImportForm = ({ examEvent, onSuccess, onCancel }: ExcelImportFormProp
 
         {previewData.length > 0 && (
           <div className="border rounded-lg p-4">
-            <h4 className="font-medium mb-3">Preview (First 3 rows)</h4>
-            <div className="overflow-x-auto">
+            <h4 className="font-medium mb-3">Preview - All {previewData.length} rows</h4>
+            <div className="overflow-x-auto max-h-96 overflow-y-auto">
               <table className="w-full text-sm border-collapse">
-                <thead>
+                <thead className="sticky top-0 bg-white">
                   <tr className="border-b">
+                    <th className="text-left p-2">Status</th>
                     <th className="text-left p-2">Roll Number</th>
                     <th className="text-left p-2">Name</th>
+                    <th className="text-left p-2">Semester</th>
+                    <th className="text-left p-2">Department</th>
                     <th className="text-left p-2">Email</th>
+                    <th className="text-left p-2">Validation</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {previewData.slice(0, 3).map((row, index) => (
-                    <tr key={index} className="border-b">
+                  {previewData.map((row, index) => (
+                    <tr key={index} className={`border-b ${row.isValid ? 'bg-green-50' : 'bg-red-50'}`}>
+                      <td className="p-2">
+                        {row.isValid ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        )}
+                      </td>
                       <td className="p-2 font-mono">{row.roll_number}</td>
                       <td className="p-2">{row.first_name} {row.last_name}</td>
-                      <td className="p-2 text-blue-600">{row.email}</td>
+                      <td className="p-2 text-center">{row.current_semester || 'N/A'}</td>
+                      <td className="p-2">{row.department || 'N/A'}</td>
+                      <td className="p-2 text-blue-600">{row.email || 'N/A'}</td>
+                      <td className="p-2">
+                        {row.isValid ? (
+                          <span className="text-green-600 text-xs">✓ Found in DB</span>
+                        ) : (
+                          <span className="text-red-600 text-xs">✗ Not found in DB</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="mt-3 flex gap-4 text-sm">
+              <span className="text-green-600">
+                ✓ Valid: {previewData.filter(row => row.isValid).length}
+              </span>
+              <span className="text-red-600">
+                ✗ Invalid: {previewData.filter(row => !row.isValid).length}
+              </span>
             </div>
           </div>
         )}
@@ -801,10 +944,13 @@ const ExcelImportForm = ({ examEvent, onSuccess, onCancel }: ExcelImportFormProp
       <div className="flex gap-3">
         <Button 
           onClick={handleUpload} 
-          disabled={!file || isUploading}
+          disabled={!file || isUploading || previewData.filter(row => row.isValid).length === 0}
           className="bg-gradient-primary hover:bg-primary-hover"
         >
-          {isUploading ? 'Importing...' : 'Import Students'}
+          {isUploading ? 'Importing...' : 
+           previewData.length > 0 ? 
+           `Import ${previewData.filter(row => row.isValid).length} Valid Students` : 
+           'Import Students'}
         </Button>
         <Button variant="outline" onClick={onCancel}>
           Cancel

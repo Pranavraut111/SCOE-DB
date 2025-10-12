@@ -82,7 +82,7 @@ const SubjectMaster = () => {
 
   const fetchSubjectCatalog = async (department: string, semester: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/subjects/catalog?department=${encodeURIComponent(department)}&semester=${semester}`);
+      const response = await fetch(`/api/v1/subjects/catalog?department=${encodeURIComponent(department)}&semester=${semester}`);
       if (response.ok) {
         const data = await response.json();
         setSubjectCatalog(data);
@@ -94,7 +94,7 @@ const SubjectMaster = () => {
 
   const fetchSubjects = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/subjects/');
+      const response = await fetch('/api/v1/subjects/');
       if (response.ok) {
         const data = await response.json();
         setSubjects(data);
@@ -189,7 +189,7 @@ const SubjectMaster = () => {
       }
 
       const method = editingSubject ? 'PUT' : 'POST';
-      const url = editingSubject ? `http://localhost:8000/api/v1/subjects/${editingSubject.id}` : 'http://localhost:8000/api/v1/subjects/';
+      const url = editingSubject ? `/api/v1/subjects/${editingSubject.id}` : '/api/v1/subjects/';
       
       console.log('Submitting data:', formData);
       console.log('Edit mode:', !!editingSubject);
@@ -270,7 +270,7 @@ const SubjectMaster = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/subjects/${subjectId}`, {
+      const response = await fetch(`/api/v1/subjects/${subjectId}`, {
         method: 'DELETE'
       });
       

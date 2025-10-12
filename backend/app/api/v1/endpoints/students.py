@@ -327,22 +327,62 @@ async def import_save(
         for idx, row in enumerate(rows, 1):
             total += 1
             try:
-                # Extract and validate required fields
-                first_name = str(row.get('First Name', '')).strip()
-                middle_name = str(row.get('Middle Name', '')).strip()
-                last_name = str(row.get('Last Name', '')).strip()
-                address = str(row.get('Address', '')).strip()
-                gender = str(row.get('Gender', '')).strip().lower()
-                category = str(row.get('Category', '')).strip()
-                dob = str(row.get('Date of Birth', '')).strip()
-                phone = str(row.get('Phone Number', '')).strip()
-                branch = str(row.get('Branch', '')).strip()
-                year = str(row.get('Year', '')).strip()
-                mother_name = str(row.get('Mother Name', '')).strip()
+                # Extract and validate required fields - support both formats
+                first_name = str(row.get('first_name', row.get('First Name', ''))).strip()
+                middle_name = str(row.get('middle_name', row.get('Middle Name', ''))).strip()
+                last_name = str(row.get('last_name', row.get('Last Name', ''))).strip()
+                address = str(row.get('address', row.get('Address', ''))).strip()
+                gender = str(row.get('gender', row.get('Gender', ''))).strip().lower()
+                category = str(row.get('category', row.get('Category', ''))).strip()
+                dob = str(row.get('date_of_birth', row.get('Date of Birth', ''))).strip()
+                phone = str(row.get('phone', row.get('Phone Number', ''))).strip()
+                branch = str(row.get('department', row.get('Branch', ''))).strip()
+                year = str(row.get('Year', '')).strip()  # Keep Year for legacy support
+                mother_name = str(row.get('mother_name', row.get('Mother Name', ''))).strip()
                 
-                # Validate required fields
-                if not all([first_name, middle_name, last_name, address, gender, category, dob, phone, branch, year, mother_name]):
-                    errors.append(f"Row {idx}: Missing required fields")
+                # Handle current_semester and admission_year from manual entry format
+                current_semester_raw = row.get('current_semester', '2')  # Default to semester 2
+                admission_year_raw = row.get('admission_year', '2024')  # Default to 2024
+                
+                # Debug logging
+                print(f"Row {idx}: current_semester_raw='{current_semester_raw}', admission_year_raw='{admission_year_raw}'")
+                print(f"Row {idx}: All row keys: {list(row.keys())}")
+                
+                # Convert to integers
+                try:
+                    current_semester = int(current_semester_raw) if current_semester_raw else 2
+                except (ValueError, TypeError):
+                    print(f"Row {idx}: Failed to convert current_semester '{current_semester_raw}' to int, using default 2")
+                    current_semester = 2
+                    
+                try:
+                    admission_year = int(admission_year_raw) if admission_year_raw else 2024
+                except (ValueError, TypeError):
+                    print(f"Row {idx}: Failed to convert admission_year '{admission_year_raw}' to int, using default 2024")
+                    admission_year = 2024
+                
+                print(f"Row {idx}: Final values - current_semester={current_semester}, admission_year={admission_year}")
+                
+                # Convert year to semester if using legacy format and no current_semester provided
+                if year and not row.get('current_semester'):
+                    if year == '1st Year':
+                        current_semester = 2
+                    elif year == '2nd Year':
+                        current_semester = 4
+                    elif year == '3rd Year':
+                        current_semester = 6
+                    elif year == '4th Year':
+                        current_semester = 8
+                
+                # Validate required fields (don't require year for manual entry format)
+                required_fields = [first_name, middle_name, last_name, address, gender, category, dob, phone, branch, mother_name]
+                if not all(required_fields):
+                    missing_fields = []
+                    field_names = ['first_name', 'middle_name', 'last_name', 'address', 'gender', 'category', 'date_of_birth', 'phone', 'department', 'mother_name']
+                    for i, field in enumerate(required_fields):
+                        if not field:
+                            missing_fields.append(field_names[i])
+                    errors.append(f"Row {idx}: Missing required fields: {', '.join(missing_fields)}")
                     failed += 1
                     continue
                 
@@ -368,7 +408,10 @@ async def import_save(
                 
                 # Generate emails
                 full_name = f"{first_name} {middle_name} {last_name}"
-                personal_email = f"{first_name.lower()}.{last_name.lower()}@gmail.com"
+                # Use provided email or generate one
+                personal_email = str(row.get('email', '')).strip()
+                if not personal_email:
+                    personal_email = f"{first_name.lower()}.{last_name.lower()}@gmail.com"
                 institutional_email = generate_institutional_email(full_name, branch)
                 
                 # Ensure unique emails and phone numbers
@@ -423,14 +466,16 @@ async def import_save(
                     date_of_birth=dob,
                     gender=student_schema.Gender[gender],
                     address=address,
-                    state=year,
+                    state=year or f"{current_semester//2}{'st' if current_semester//2 == 1 else 'nd' if current_semester//2 == 2 else 'rd' if current_semester//2 == 3 else 'th'} Year",
                     country='India',
                     admission_number=next_roll_number,
                     roll_number=next_roll_number,
                     institutional_email=institutional_email,
                     department=branch,
                     category=category,
-                    mother_name=mother_name
+                    mother_name=mother_name,
+                    current_semester=current_semester,
+                    admission_year=admission_year
                 )
                 
                 # Save to database

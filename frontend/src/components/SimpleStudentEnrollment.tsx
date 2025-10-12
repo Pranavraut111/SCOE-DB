@@ -167,7 +167,7 @@ const SimpleStudentEnrollment = ({ examEvent }: SimpleStudentEnrollmentProps) =>
   const downloadTemplate = async () => {
     try {
       // Fetch demo students from API
-      const response = await fetch(`http://localhost:8000/api/v1/students/demo/template-data?department=${encodeURIComponent(examEvent.department)}&limit=5`);
+      const response = await fetch(`/api/v1/students/demo/template-data?department=${encodeURIComponent(examEvent.department)}&limit=5`);
       
       let demoStudents = [];
       if (response.ok) {

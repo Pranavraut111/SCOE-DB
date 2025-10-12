@@ -24,6 +24,9 @@ export interface StudentBase {
   mother_name: string;
   photo?: string;
   subjects?: string[];
+  // Student progression fields
+  current_semester?: number;
+  admission_year?: number;
 }
 
 export interface Student extends StudentBase {
@@ -58,6 +61,8 @@ export interface StudentCreate {
   branch?: string;
   year?: string;
   mother_name: string;
+  current_semester?: number;
+  admission_year?: number;
   photo?: string;
 }
 

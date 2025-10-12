@@ -28,20 +28,70 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
   const [parsedData, setParsedData] = useState<any[] | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [existingStudents, setExistingStudents] = useState<any[]>([]);
+
+  const fetchExistingStudents = async () => {
+    try {
+      const response = await fetch('/api/v1/students/');
+      if (response.ok) {
+        const students = await response.json();
+        setExistingStudents(students);
+        return students;
+      }
+    } catch (error) {
+      console.error('Error fetching existing students:', error);
+    }
+    return [];
+  };
 
   const downloadSampleExcel = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/students/import/template-new');
-      
-      if (!response.ok) {
-        throw new Error('Failed to download template');
-      }
-      
-      const blob = await response.blob();
+      // Create template matching manual entry format
+      const sampleData = [
+        {
+          first_name: 'Aarav',
+          middle_name: 'Rajesh', 
+          last_name: 'Sharma',
+          email: 'aarav.sharma@gmail.com',
+          phone: '9876543210',
+          date_of_birth: '2005-03-15',
+          gender: 'male',
+          address: 'Flat 101, Sunshine Apartments, Pune',
+          category: 'General',
+          department: 'Computer Science Engineering',
+          mother_name: 'Sunita Sharma',
+          current_semester: 2,
+          admission_year: 2024
+        },
+        {
+          first_name: 'Priya',
+          middle_name: 'Suresh',
+          last_name: 'Patel', 
+          email: 'priya.patel@gmail.com',
+          phone: '9876543211',
+          date_of_birth: '2004-07-22',
+          gender: 'female',
+          address: 'House 25, Green Valley, Pune',
+          category: 'OBC',
+          department: 'Computer Science Engineering',
+          mother_name: 'Kavita Patel',
+          current_semester: 4,
+          admission_year: 2023
+        }
+      ];
+
+      // Create CSV content
+      const headers = Object.keys(sampleData[0]);
+      const csvContent = [
+        headers.join(','),
+        ...sampleData.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'student_bulk_import_template_v2.xlsx';
+      a.download = 'student_bulk_import_template_manual_entry_format.csv';
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -49,7 +99,7 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
       
       toast({
         title: "Template downloaded",
-        description: "New template with separated name columns downloaded",
+        description: "Template matching manual entry format downloaded",
       });
     } catch (error) {
       toast({
@@ -67,7 +117,7 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
       formData.append('file', file);
       
       try {
-        const response = await fetch('http://localhost:8000/api/v1/students/import/preview', {
+        const response = await fetch('/api/v1/students/import/preview', {
           method: 'POST',
           body: formData,
         });
@@ -133,11 +183,11 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
     }
   };
 
-  const validateStudentData = (data: any): { isValid: boolean; errors: string[] } => {
+  const validateStudentData = (data: any, existingStudents: any[] = []): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
     const requiredFields = [
-      'First Name', 'Middle Name', 'Last Name', 'Address', 'Gender', 'Category', 'Date of Birth', 
-      'Phone Number', 'Branch', 'Year', 'Mother Name'
+      'first_name', 'middle_name', 'last_name', 'email', 'phone', 'date_of_birth', 
+      'gender', 'address', 'category', 'department', 'mother_name', 'current_semester', 'admission_year'
     ];
 
     requiredFields.forEach(field => {
@@ -147,23 +197,57 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
     });
 
     // Validate gender
-    if (data.Gender && !['Male', 'Female', 'male', 'female'].includes(data.Gender)) {
-      errors.push('Gender must be Male or Female');
+    if (data.gender && !['male', 'female', 'other'].includes(data.gender.toLowerCase())) {
+      errors.push('Gender must be male, female, or other');
     }
 
-    // Validate year
-    if (data.Year && !['1st Year', '2nd Year', '3rd Year', '4th Year'].includes(data.Year)) {
-      errors.push('Year must be 1st Year, 2nd Year, 3rd Year, or 4th Year');
+    // Validate current_semester
+    if (data.current_semester && (data.current_semester < 1 || data.current_semester > 8)) {
+      errors.push('Current semester must be between 1 and 8');
     }
 
-    // Validate branch
-    if (data.Branch && !BRANCHES.includes(data.Branch)) {
-      errors.push(`Branch must be one of: ${BRANCHES.join(', ')}`);
+    // Validate department
+    const validDepartments = ['Computer Science Engineering', 'Information Technology', 'Electronics and Communication Engineering', 'Electrical Engineering', 'Mechanical Engineering', 'Civil Engineering'];
+    if (data.department && !validDepartments.includes(data.department)) {
+      errors.push(`Department must be one of: ${validDepartments.join(', ')}`);
     }
 
     // Validate phone number format
-    if (data['Phone Number'] && !/^\d{10}$/.test(data['Phone Number'].toString())) {
-      errors.push('Phone Number must be 10 digits');
+    if (data.phone && !/^\d{10}$/.test(data.phone.toString())) {
+      errors.push('Phone number must be 10 digits');
+    }
+
+    // Validate email format
+    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      errors.push('Invalid email format');
+    }
+
+    // Check for duplicates against existing students
+    if (existingStudents.length > 0) {
+      const duplicateByEmail = existingStudents.find(student => 
+        student.email && data.email && student.email.toLowerCase() === data.email.toLowerCase()
+      );
+      if (duplicateByEmail) {
+        errors.push(`Email ${data.email} already exists (${duplicateByEmail.first_name} ${duplicateByEmail.last_name})`);
+      }
+
+      const duplicateByPhone = existingStudents.find(student => 
+        student.phone && data.phone && student.phone === data.phone
+      );
+      if (duplicateByPhone) {
+        errors.push(`Phone ${data.phone} already exists (${duplicateByPhone.first_name} ${duplicateByPhone.last_name})`);
+      }
+
+      // Check for duplicate by name combination (less strict)
+      const duplicateByName = existingStudents.find(student => 
+        student.first_name && student.last_name && data.first_name && data.last_name &&
+        student.first_name.toLowerCase() === data.first_name.toLowerCase() &&
+        student.last_name.toLowerCase() === data.last_name.toLowerCase() &&
+        student.department === data.department
+      );
+      if (duplicateByName) {
+        errors.push(`Student ${data.first_name} ${data.last_name} already exists in ${data.department}`);
+      }
     }
 
     return {
@@ -222,7 +306,7 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/students/import/save', {
+      const response = await fetch('/api/v1/students/import/save', {
         method: 'POST',
         body: formData,
       });
@@ -276,39 +360,64 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
       const headers = Object.keys(data[0]);
       console.log('File headers:', headers);
       
-      // Check for new format (separated names)
-      const newFormatColumns = ['First Name', 'Middle Name', 'Last Name', 'Address', 'Gender', 'Category', 'Date of Birth', 'Phone Number', 'Branch', 'Year', 'Mother Name'];
-      const missingNewFormat = newFormatColumns.filter(col => !headers.includes(col));
+      // Check for manual entry format (matches StudentEntryForm)
+      const manualEntryColumns = ['first_name', 'middle_name', 'last_name', 'email', 'phone', 'date_of_birth', 'gender', 'address', 'category', 'department', 'mother_name', 'current_semester', 'admission_year'];
+      const missingManualEntry = manualEntryColumns.filter(col => !headers.includes(col));
       
-      // Check for old format (single name)
-      const oldFormatColumns = ['Name', 'Address', 'Gender', 'Category', 'Date of Birth', 'Phone Number', 'Branch', 'Year', 'Mother Name'];
-      const missingOldFormat = oldFormatColumns.filter(col => !headers.includes(col));
+      // Check for legacy format (Title Case - for backward compatibility)
+      const legacyFormatColumns = ['First Name', 'Middle Name', 'Last Name', 'Address', 'Gender', 'Category', 'Date of Birth', 'Phone Number', 'Branch', 'Year', 'Mother Name'];
+      const missingLegacyFormat = legacyFormatColumns.filter(col => !headers.includes(col));
       
-      console.log('Missing new format columns:', missingNewFormat);
-      console.log('Missing old format columns:', missingOldFormat);
+      console.log('Missing manual entry columns:', missingManualEntry);
+      console.log('Missing legacy format columns:', missingLegacyFormat);
       
-      // If new format is complete, proceed
-      if (missingNewFormat.length === 0) {
-        console.log('Using new format - all columns present');
+      // If manual entry format is complete, proceed (preferred format)
+      if (missingManualEntry.length === 0) {
+        console.log('Using manual entry format - all columns present');
       }
-      // If old format is complete, convert to new format
-      else if (missingOldFormat.length === 0 && headers.includes('Name')) {
-        console.log('Converting old format to new format');
+      // If legacy format is complete, convert to manual entry format
+      else if (missingLegacyFormat.length === 0) {
+        console.log('Converting legacy format to manual entry format');
         data.forEach(row => {
-          if (row['Name']) {
-            const nameParts = row['Name'].trim().split(' ');
-            row['First Name'] = nameParts[0] || '';
-            row['Middle Name'] = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : (nameParts[1] || '');
-            row['Last Name'] = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-            delete row['Name']; // Remove old column
-          }
+          // Convert Title Case to lowercase with underscores
+          row['first_name'] = row['First Name'] || '';
+          row['middle_name'] = row['Middle Name'] || '';
+          row['last_name'] = row['Last Name'] || '';
+          row['email'] = row['Email'] || `${row['First Name']?.toLowerCase()}.${row['Last Name']?.toLowerCase()}@gmail.com`;
+          row['phone'] = row['Phone Number'] || '';
+          row['date_of_birth'] = row['Date of Birth'] || '';
+          row['gender'] = row['Gender']?.toLowerCase() || 'male';
+          row['address'] = row['Address'] || '';
+          row['category'] = row['Category'] || 'General';
+          row['department'] = row['Branch'] || 'Computer Science Engineering';
+          row['mother_name'] = row['Mother Name'] || '';
+          row['current_semester'] = row['Year'] === '1st Year' ? 2 : 
+                                   row['Year'] === '2nd Year' ? 4 :
+                                   row['Year'] === '3rd Year' ? 6 : 8;
+          row['admission_year'] = 2024;
+          
+          // Remove legacy columns
+          delete row['First Name'];
+          delete row['Middle Name'];
+          delete row['Last Name'];
+          delete row['Phone Number'];
+          delete row['Date of Birth'];
+          delete row['Gender'];
+          delete row['Address'];
+          delete row['Category'];
+          delete row['Branch'];
+          delete row['Mother Name'];
+          delete row['Year'];
         });
       }
       // If neither format is complete, show error
       else {
-        throw new Error(`File format not recognized. Please use the new template with columns: ${newFormatColumns.join(', ')}`);
+        throw new Error(`File format not recognized. Please use the template with columns: ${manualEntryColumns.join(', ')}`);
       }
 
+      // Fetch existing students for duplicate checking
+      const existingStudentsData = await fetchExistingStudents();
+      
       setParsedData(data);
       
       toast({
@@ -492,13 +601,13 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
                 <div className="text-center p-3 bg-green-50 rounded">
                   <div className="font-medium text-green-700">Valid Records</div>
                   <div className="text-xl font-bold text-green-900">
-                    {parsedData.filter(row => validateStudentData(row).isValid).length}
+                    {parsedData.filter(row => validateStudentData(row, existingStudents).isValid).length}
                   </div>
                 </div>
                 <div className="text-center p-3 bg-red-50 rounded">
                   <div className="font-medium text-red-700">Invalid Records</div>
                   <div className="text-xl font-bold text-red-900">
-                    {parsedData.filter(row => !validateStudentData(row).isValid).length}
+                    {parsedData.filter(row => !validateStudentData(row, existingStudents).isValid).length}
                   </div>
                 </div>
               </div>
@@ -518,7 +627,7 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
                   </thead>
                   <tbody>
                     {parsedData.slice(0, 5).map((row, index) => {
-                      const validation = validateStudentData(row);
+                      const validation = validateStudentData(row, existingStudents);
                       return (
                         <tr key={index} className={validation.isValid ? '' : 'bg-red-50'}>
                           {Object.values(row).map((value, cellIndex) => (
@@ -530,7 +639,14 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
                             {validation.isValid ? (
                               <Badge variant="default" className="bg-green-100 text-green-800">Valid</Badge>
                             ) : (
-                              <Badge variant="destructive">Invalid</Badge>
+                              <div>
+                                <Badge variant="destructive">Invalid</Badge>
+                                <div className="text-xs text-red-600 mt-1">
+                                  {validation.errors.slice(0, 2).map((error, i) => (
+                                    <div key={i}>{error}</div>
+                                  ))}
+                                </div>
+                              </div>
                             )}
                           </td>
                         </tr>
@@ -543,9 +659,9 @@ const BulkUpload = ({ onStudentsUploaded }: BulkUploadProps) => {
               <Button 
                 onClick={handleAddStudents} 
                 className="w-full" 
-                disabled={isAdding || parsedData.filter(row => validateStudentData(row).isValid).length === 0}
+                disabled={isAdding || parsedData.filter(row => validateStudentData(row, existingStudents).isValid).length === 0}
               >
-                {isAdding ? "Adding Students..." : `Add ${parsedData.filter(row => validateStudentData(row).isValid).length} Valid Students`}
+                {isAdding ? "Adding Students..." : `Add ${parsedData.filter(row => validateStudentData(row, existingStudents).isValid).length} Valid Students`}
               </Button>
             </div>
           </CardContent>

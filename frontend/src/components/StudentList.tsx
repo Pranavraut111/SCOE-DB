@@ -28,6 +28,7 @@ const StudentList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBranch, setFilterBranch] = useState('all');
   const [filterYear, setFilterYear] = useState('all');
+  const [filterSemester, setFilterSemester] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
@@ -37,7 +38,7 @@ const StudentList = () => {
 
   const loadStudents = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/students/');
+      const response = await fetch('/api/v1/students/');
       if (response.ok) {
         const studentData = await response.json();
         setStudents(studentData);
@@ -62,14 +63,15 @@ const StudentList = () => {
 
       const matchesBranch = filterBranch === 'all' || student.department === filterBranch;
       const matchesYear = filterYear === 'all' || student.state === filterYear;
+      const matchesSemester = filterSemester === 'all' || student.current_semester?.toString() === filterSemester;
 
-      return matchesSearch && matchesBranch && matchesYear;
+      return matchesSearch && matchesBranch && matchesYear && matchesSemester;
     });
-  }, [students, searchTerm, filterBranch, filterYear]);
+  }, [students, searchTerm, filterBranch, filterYear, filterSemester]);
 
   const handleUpdateStudent = async (updatedStudent: Student) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/students/${updatedStudent.id}`, {
+      const response = await fetch(`/api/v1/students/${updatedStudent.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -118,7 +120,7 @@ const StudentList = () => {
 
   const handleDeleteStudent = async (studentId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/students/${studentId}`, {
+      const response = await fetch(`/api/v1/students/${studentId}`, {
         method: 'DELETE',
       });
       
@@ -293,6 +295,21 @@ const StudentList = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div>
+                <Label>Semester</Label>
+                <Select value={filterSemester} onValueChange={setFilterSemester}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sems</SelectItem>
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                      <SelectItem key={sem} value={sem.toString()}>Sem {sem}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Export Button */}
@@ -313,7 +330,7 @@ const StudentList = () => {
             <p className="text-sm text-muted-foreground">
               Showing {filteredStudents.length} of {students.length} students
             </p>
-            {(searchTerm || filterBranch !== 'all' || filterYear !== 'all') && (
+            {(searchTerm || filterBranch !== 'all' || filterYear !== 'all' || filterSemester !== 'all') && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -321,6 +338,7 @@ const StudentList = () => {
                   setSearchTerm('');
                   setFilterBranch('all');
                   setFilterYear('all');
+                  setFilterSemester('all');
                 }}
               >
                 <Filter className="mr-2 h-4 w-4" />
@@ -359,6 +377,8 @@ const StudentList = () => {
                     <TableHead>Roll Number</TableHead>
                     <TableHead>Department</TableHead>
                     <TableHead>Year</TableHead>
+                    <TableHead>Semester</TableHead>
+                    <TableHead>Admission</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Category</TableHead>
@@ -402,10 +422,25 @@ const StudentList = () => {
                           {student.state}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className="text-xs font-mono">
+                          Sem {student.current_semester || 'N/A'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="text-sm font-medium">
+                          {student.admission_year || 'N/A'}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <div className="max-w-[200px] truncate text-primary" title={student.email}>
                           {student.email}
                         </div>
+                        {(student as any).institutional_email && (
+                          <div className="text-xs text-muted-foreground truncate" title={(student as any).institutional_email}>
+                            {(student as any).institutional_email}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>{student.phone}</TableCell>
                       <TableCell>
