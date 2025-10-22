@@ -37,6 +37,9 @@ class Student(Base):
     category = Column(String(20))
     mother_name = Column(String(100), nullable=False)
     
+    # Authentication
+    password_hash = Column(String(255), nullable=True, comment="Hashed password for student login")
+    
     # Student Progression Tracking Fields
     current_semester = Column(Integer, default=1, comment="Current semester (1-8)")
     admission_year = Column(Integer, default=2024, comment="Year student was admitted")

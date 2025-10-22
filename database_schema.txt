@@ -1,0 +1,118 @@
+# SCOE-DB Database Schema Documentation
+
+## Tables Overview
+
+1. **students** - Core student information
+2. **exam_events** - Exam sessions and metadata
+3. **exam_schedules** - Individual exam schedules
+4. **student_exam_enrollments** - Student enrollment in exams
+5. **student_exams** - Individual exam attempts
+6. **exam_results** - Consolidated exam results
+7. **subject_catalog** - Predefined subjects
+8. **subjects** - Subject master for academic years
+9. **subject_components** - Marks breakdown components
+10. **student_progression_history** - Student academic progression
+
+## Detailed Schema
+
+### students
+- id (PK)
+- first_name, middle_name, last_name
+- email, phone, date_of_birth
+- gender, address, state, country, postal_code
+- admission_number, roll_number, institutional_email
+- department, category, mother_name
+- current_semester, admission_year
+- created_at, updated_at
+
+### exam_events
+- id (PK)
+- name, description, exam_type, status
+- department, semester, academic_year
+- start_date, end_date
+- created_by, created_at, updated_at
+- instructions, passing_marks_percentage
+
+### exam_schedules
+- id (PK)
+- exam_event_id (FK), subject_id (FK)
+- exam_date, start_time, end_time, duration_minutes
+- venue, max_students, supervisor
+- total_marks, theory_marks, practical_marks
+- special_instructions, materials_allowed
+- is_active, created_at, updated_at
+
+### student_exam_enrollments
+- id (PK)
+- exam_event_id (FK), student_id (FK)
+- enrollment_status, enrollment_date
+- is_backlog_student, exempted_subjects
+- special_requirements, enrolled_by, notes
+
+### student_exams
+- id (PK)
+- exam_schedule_id (FK), student_id (FK)
+- attendance_status, seat_number
+- theory_marks_obtained, practical_marks_obtained
+- total_marks_obtained, grade, is_pass
+- start_time_actual, end_time_actual
+- extra_time_given, malpractice_reported
+- answer_sheet_number, answer_sheet_received
+- marks_entered_by, marks_entered_at
+- verified_by, verified_at
+- created_at, updated_at
+
+### exam_results
+- id (PK)
+- exam_event_id (FK), student_id (FK)
+- total_subjects, subjects_appeared
+- subjects_passed, subjects_failed
+- total_marks_possible, total_marks_obtained
+- percentage, overall_grade
+- is_promoted, has_backlogs, backlog_subjects
+- result_declared, result_declared_at
+- result_declared_by, remarks
+- calculated_at, updated_at
+
+### subject_catalog
+- id (PK)
+- department, semester
+- subject_code, subject_name
+- default_credits
+
+### subjects
+- id (PK)
+- year, scheme, department, semester
+- subject_code, subject_name, credits
+- overall_passing_criteria
+
+### subject_components
+- id (PK)
+- subject_id (FK), component_type
+- is_enabled, out_of_marks
+- passing_marks, resolution
+
+### student_progression_history
+- id (PK)
+- student_id (FK), from_semester
+- to_semester, academic_year
+- promotion_date, exam_event_id (FK)
+- status, remarks, created_at
+
+## Relationships
+
+1. students ↔ student_exam_enrollments (1:N)
+2. students ↔ student_exams (1:N)
+3. students ↔ exam_results (1:N)
+4. students ↔ student_progression_history (1:N)
+5. exam_events ↔ exam_schedules (1:N)
+6. exam_events ↔ student_exam_enrollments (1:N)
+7. exam_schedules ↔ student_exams (1:N)
+8. subjects ↔ subject_components (1:N)
+
+## Setup
+
+To initialize the database:
+1. Run `python backend/init_db.py`
+2. This creates all tables and sets up basic schema
+

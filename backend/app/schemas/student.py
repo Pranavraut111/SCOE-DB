@@ -101,4 +101,19 @@ class StudentResponse(StudentInDBBase):
             return "Graduate"
 
 class StudentInDB(StudentInDBBase):
-    pass
+    password_hash: Optional[str] = None
+
+class StudentLogin(BaseModel):
+    """Schema for student login"""
+    institutional_email: EmailStr
+    password: str
+
+class StudentChangePassword(BaseModel):
+    """Schema for changing student password"""
+    old_password: str
+    new_password: str = Field(..., min_length=8, description="New password must be at least 8 characters")
+
+class StudentLoginResponse(BaseModel):
+    """Response after successful login"""
+    student: Student
+    message: str = "Login successful"

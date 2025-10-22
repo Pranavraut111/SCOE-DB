@@ -25,6 +25,11 @@ class EnrollmentStatus(str, enum.Enum):
     EXEMPTED = "exempted"
     DISQUALIFIED = "disqualified"
 
+class ApplicationStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
 class ExamEvent(Base):
     """
     Main exam event (e.g., "Second Year Mid-Term Exams, Winter 2025")
@@ -215,6 +220,49 @@ class ExamResult(Base):
     
     # Metadata
     calculated_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    exam_event = relationship("ExamEvent")
+    student = relationship("Student")
+
+class StudentEnrollmentApplication(Base):
+    """
+    Student-initiated enrollment applications for exam events
+    Students apply, admin reviews and approves/rejects
+    """
+    __tablename__ = "student_enrollment_applications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    exam_event_id = Column(Integer, ForeignKey("exam_events.id"), nullable=False)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    
+    # Application details
+    application_status = Column(Enum(ApplicationStatus), default=ApplicationStatus.PENDING)
+    applied_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Student-provided information (for verification)
+    student_name = Column(String(200), nullable=False)
+    roll_number = Column(String(32), nullable=False)
+    department = Column(String(100), nullable=False)
+    semester = Column(Integer, nullable=False)
+    
+    # Subject selection (JSON array of subject IDs or names)
+    selected_subjects = Column(Text)  # JSON array
+    
+    # Special requirements
+    is_backlog_student = Column(Boolean, default=False)
+    special_requirements = Column(Text)
+    student_remarks = Column(Text)
+    
+    # Admin review
+    reviewed_by = Column(String(100))  # Admin who reviewed
+    reviewed_at = Column(DateTime)
+    admin_remarks = Column(Text)
+    rejection_reason = Column(Text)
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships

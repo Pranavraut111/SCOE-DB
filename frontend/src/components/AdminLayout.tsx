@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Users, 
   UserPlus, 
@@ -10,10 +14,15 @@ import {
   GraduationCap,
   LogOut,
   Menu,
-  ClipboardList
+  ClipboardList,
+  Lock,
+  Eye,
+  EyeOff,
+  Shield
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import axios from "axios";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -23,7 +32,16 @@ interface AdminLayoutProps {
 
 const AdminLayout = ({ children, activeTab, onTabChange }: AdminLayoutProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
 
   const menuItems = [
     { id: 'students', label: 'Student List', icon: Users },
@@ -32,6 +50,164 @@ const AdminLayout = ({ children, activeTab, onTabChange }: AdminLayoutProps) => 
     { id: 'examinations', label: 'Examinations', icon: ClipboardList },
   ];
 
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      toast({
+        title: "Login required",
+        description: "Please enter your email and password",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const response = await axios.post('/api/v1/admin/auth/login', {
+        email: email,
+        password: password
+      });
+
+      if (response.data.email) {
+        setIsAuthenticated(true);
+        setAdminEmail(response.data.email);
+        toast({
+          title: "Login successful!",
+          description: "Welcome to Admin Portal",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.response?.data?.detail || "Incorrect email or password",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setEmail('');
+    setPassword('');
+    setAdminEmail('');
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully",
+    });
+    navigate('/');
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
+  };
+
+  // If not authenticated, show login screen
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center space-y-2">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                <Shield className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold">SCOEFLOW CONNECT</h1>
+            <p className="text-muted-foreground">Admin Portal</p>
+          </div>
+
+          <Card className="shadow-hover">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                <Lock className="h-8 w-8 text-primary" />
+              </div>
+              <CardTitle className="text-2xl">Admin Login</CardTitle>
+              <CardDescription>
+                Enter your admin credentials to access the dashboard
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter admin email"
+                  onKeyPress={handleKeyPress}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Enter password"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <Button 
+                onClick={handleLogin}
+                disabled={isLoading}
+                className="w-full bg-gradient-primary hover:bg-primary-hover"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    Logging in...
+                  </div>
+                ) : (
+                  <>
+                    <Lock className="mr-2 h-4 w-4" />
+                    Login
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Home className="h-4 w-4" />
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto text-sm"
+                  onClick={() => navigate('/')}
+                >
+                  Back to Home
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // If authenticated, show admin dashboard
   return (
     <SidebarProvider defaultOpen={isSidebarOpen}>
       <div className="min-h-screen flex w-full bg-background">
@@ -77,7 +253,7 @@ const AdminLayout = ({ children, activeTab, onTabChange }: AdminLayoutProps) => 
               <Button
                 variant="ghost"
                 className="w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => navigate('/')}
+                onClick={handleLogout}
               >
                 <LogOut className="mr-3 h-4 w-4" />
                 Logout
@@ -104,7 +280,7 @@ const AdminLayout = ({ children, activeTab, onTabChange }: AdminLayoutProps) => 
               <div className="flex items-center space-x-4">
                 <div className="text-right">
                   <p className="text-sm font-medium text-foreground">Admin User</p>
-                  <p className="text-xs text-muted-foreground">admin@college.edu</p>
+                  <p className="text-xs text-muted-foreground">{adminEmail}</p>
                 </div>
                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                   <span className="text-sm font-medium text-primary-foreground">A</span>

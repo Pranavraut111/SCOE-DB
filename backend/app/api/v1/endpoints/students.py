@@ -841,3 +841,86 @@ def get_demo_students_for_template(
         })
     
     return template_data
+
+@router.post("/auth/login", response_model=student_schema.StudentLoginResponse)
+def student_login(
+    *,
+    db: Session = Depends(get_db),
+    credentials: student_schema.StudentLogin
+):
+    """
+    Student login with institutional email and password.
+    Default password is 'Student@123' for all students.
+    """
+    student = crud_student.authenticate_student(
+        db, 
+        institutional_email=credentials.institutional_email,
+        password=credentials.password
+    )
+    
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password"
+        )
+    
+    return {
+        "student": student,
+        "message": "Login successful"
+    }
+
+@router.post("/auth/change-password")
+def change_password(
+    *,
+    db: Session = Depends(get_db),
+    student_id: int,
+    password_data: student_schema.StudentChangePassword
+):
+    """
+    Change student password. Requires old password verification.
+    """
+    student = crud_student.get_student(db, student_id=student_id)
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found"
+        )
+    
+    # Verify old password
+    authenticated = crud_student.authenticate_student(
+        db,
+        institutional_email=student.institutional_email,
+        password=password_data.old_password
+    )
+    
+    if not authenticated:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect old password"
+        )
+    
+    # Change password
+    crud_student.change_student_password(
+        db,
+        student=student,
+        new_password=password_data.new_password
+    )
+    
+    return {
+        "message": "Password changed successfully"
+    }
+
+@router.post("/auth/initialize-passwords")
+def initialize_default_passwords(
+    *,
+    db: Session = Depends(get_db)
+):
+    """
+    Initialize default password (Student@123) for all students who don't have a password.
+    This is an admin utility endpoint.
+    """
+    count = crud_student.set_default_password_for_all(db)
+    return {
+        "message": f"Default password set for {count} students",
+        "count": count
+    }

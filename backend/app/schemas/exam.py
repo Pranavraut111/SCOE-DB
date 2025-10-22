@@ -112,6 +112,7 @@ class ExamSchedule(ExamScheduleBase):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    subject: Optional[Dict[str, Any]] = None  # Include subject details
 
     class Config:
         from_attributes = True

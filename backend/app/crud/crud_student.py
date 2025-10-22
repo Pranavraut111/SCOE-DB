@@ -4,6 +4,7 @@ from sqlalchemy import or_
 from app.models.student import Student as DBStudent
 from app.services.generators import generate_roll_number, generate_institutional_email
 from app.schemas.student import StudentCreate, StudentUpdate
+from app.core.security import get_password_hash, verify_password
 
 def get_student(db: Session, student_id: int) -> Optional[DBStudent]:
     return db.query(DBStudent).filter(DBStudent.id == student_id).first()
@@ -84,3 +85,42 @@ def delete_student(db: Session, student_id: int) -> DBStudent:
 
 def get_students_count(db: Session) -> int:
     return db.query(DBStudent).count()
+
+def get_student_by_institutional_email(db: Session, institutional_email: str) -> Optional[DBStudent]:
+    """Get student by institutional email"""
+    return db.query(DBStudent).filter(DBStudent.institutional_email == institutional_email).first()
+
+def authenticate_student(db: Session, institutional_email: str, password: str) -> Optional[DBStudent]:
+    """Authenticate student with email and password"""
+    student = get_student_by_institutional_email(db, institutional_email)
+    if not student:
+        return None
+    if not student.password_hash:
+        # If no password set, check if it's the default password
+        if password == "Student@123":
+            # Set the default password hash for first login
+            student.password_hash = get_password_hash("Student@123")
+            db.commit()
+            return student
+        return None
+    if not verify_password(password, student.password_hash):
+        return None
+    return student
+
+def change_student_password(db: Session, student: DBStudent, new_password: str) -> DBStudent:
+    """Change student password"""
+    student.password_hash = get_password_hash(new_password)
+    db.commit()
+    db.refresh(student)
+    return student
+
+def set_default_password_for_all(db: Session, default_password: str = "Student@123") -> int:
+    """Set default password for all students who don't have one"""
+    students = db.query(DBStudent).filter(DBStudent.password_hash == None).all()
+    count = 0
+    password_hash = get_password_hash(default_password)
+    for student in students:
+        student.password_hash = password_hash
+        count += 1
+    db.commit()
+    return count

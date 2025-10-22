@@ -20,8 +20,8 @@ import {
 import ExamEventForm from './ExamEventForm';
 import ExamDashboard from './ExamDashboard';
 import ExamScheduleManager from './ExamScheduleManager';
-import StudentEnrollmentManager from './StudentEnrollmentManager';
-import MarksEntryManager from './MarksEntryManager';
+import EnrollmentApplicationsManager from './EnrollmentApplicationsManager';
+import MarksEntryManagerClean from './MarksEntryManagerClean';
 import ExamResultsViewer from './ExamResultsViewer';
 
 interface ExamEvent {
@@ -319,7 +319,10 @@ const ExaminationManagement = () => {
         {/* Enrollment Tab */}
         <TabsContent value="enrollment">
           {selectedEvent ? (
-            <StudentEnrollmentManager examEvent={selectedEvent} />
+            <EnrollmentApplicationsManager 
+              examEvent={selectedEvent} 
+              adminEmail="admin@scoe.edu.in"
+            />
           ) : (
             <Card>
               <CardContent className="text-center py-8">
@@ -339,7 +342,7 @@ const ExaminationManagement = () => {
         {/* Marks Entry Tab */}
         <TabsContent value="marks">
           {selectedEvent ? (
-            <MarksEntryManager examEvent={selectedEvent} />
+            <MarksEntryManagerClean examEvent={selectedEvent} />
           ) : (
             <Card>
               <CardContent className="text-center py-8">

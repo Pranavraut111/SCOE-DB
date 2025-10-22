@@ -16,7 +16,8 @@ import {
   BookOpen,
   Edit,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Bell
 } from "lucide-react";
 
 interface ExamEvent {
@@ -75,6 +76,7 @@ const ExamScheduleManager = ({ examEvent, onNavigateToEnrollment }: ExamSchedule
   const [showAddForm, setShowAddForm] = useState(false);
   const [showBulkSchedule, setShowBulkSchedule] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<ExamSchedule | null>(null);
+  const [eligibleStudentsCount, setEligibleStudentsCount] = useState<number>(0);
   const [formData, setFormData] = useState({
     subject_id: '',
     exam_date: '',
@@ -92,7 +94,32 @@ const ExamScheduleManager = ({ examEvent, onNavigateToEnrollment }: ExamSchedule
   useEffect(() => {
     fetchSchedules();
     fetchSubjects();
+    fetchEligibleStudentsCount();
   }, [examEvent.id]);
+
+  const fetchEligibleStudentsCount = async () => {
+    try {
+      const response = await fetch(`/api/v1/students/`);
+      if (response.ok) {
+        const data = await response.json();
+        // Filter students by semester and department
+        const eligibleStudents = data.filter((student: any) => 
+          student.current_semester === examEvent.semester && 
+          student.department === examEvent.department
+        );
+        setEligibleStudentsCount(eligibleStudents.length);
+      }
+    } catch (error) {
+      console.error('Error fetching eligible students:', error);
+    }
+  };
+
+  const handleNotifyStudents = () => {
+    toast({
+      title: "Students Notified!",
+      description: `${eligibleStudentsCount} students in ${examEvent.department} - Semester ${examEvent.semester} can now see this exam and apply for enrollment.`,
+    });
+  };
 
   const fetchSchedules = async () => {
     setIsLoading(true);
@@ -388,22 +415,32 @@ const ExamScheduleManager = ({ examEvent, onNavigateToEnrollment }: ExamSchedule
                 Schedule All Semester Subjects
               </Button>
               {schedules.length > 0 && (
-                <Button 
-                  onClick={() => {
-                    if (onNavigateToEnrollment) {
-                      onNavigateToEnrollment();
-                    } else {
-                      // Fallback to URL navigation if callback not provided
-                      const enrollmentUrl = `/enrollment?exam_event_id=${examEvent.id}&department=${encodeURIComponent(examEvent.department)}&semester=${examEvent.semester}`;
-                      window.location.href = enrollmentUrl;
-                    }
-                  }}
-                  variant="default"
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <User className="mr-2 h-4 w-4" />
-                  Proceed to Student Enrollment
-                </Button>
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={handleNotifyStudents}
+                    variant="default"
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Bell className="mr-2 h-4 w-4" />
+                    Notify Students ({eligibleStudentsCount})
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      if (onNavigateToEnrollment) {
+                        onNavigateToEnrollment();
+                      } else {
+                        // Fallback to URL navigation if callback not provided
+                        const enrollmentUrl = `/enrollment?exam_event_id=${examEvent.id}&department=${encodeURIComponent(examEvent.department)}&semester=${examEvent.semester}`;
+                        window.location.href = enrollmentUrl;
+                      }
+                    }}
+                    variant="default"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    Proceed to Student Enrollment
+                  </Button>
+                </div>
               )}
             </div>
           </div>

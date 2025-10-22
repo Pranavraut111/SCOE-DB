@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     SMTP_FROM_NAME: str = "SCOE Admin"
     SMTP_FROM_EMAIL: Optional[str] = None
     
+    # Admin credentials
+    ADMIN_EMAIL: str = "Praut1086@gmail.com"
+    ADMIN_PASSWORD: str = "admin123"
+    
     class Config:
         case_sensitive = True
         env_file = ".env"

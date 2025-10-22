@@ -159,7 +159,7 @@ def create_exam_schedule(
     exam_schedule = crud_exam_schedule.create(db=db, obj_in=schedule_in)
     return exam_schedule
 
-@router.get("/events/{event_id}/schedules/", response_model=List[exam_schema.ExamSchedule])
+@router.get("/events/{event_id}/schedules/")
 def read_exam_schedules(
     event_id: int,
     db: Session = Depends(get_db),
@@ -167,8 +167,58 @@ def read_exam_schedules(
     """
     Get all exam schedules for an event (the timetable)
     """
-    exam_schedules = crud_exam_schedule.get_by_exam_event(db, exam_event_id=event_id)
-    return exam_schedules
+    try:
+        from app.models.subject import Subject
+        
+        exam_schedules = crud_exam_schedule.get_by_exam_event(db, exam_event_id=event_id)
+        
+        # Manually attach subject data
+        result = []
+        for schedule in exam_schedules:
+            try:
+                subject = db.query(Subject).filter(Subject.id == schedule.subject_id).first()
+                
+                # Convert subject to dict if it exists
+                subject_dict = None
+                if subject:
+                    subject_dict = {
+                        "id": subject.id,
+                        "name": subject.subject_name,
+                        "code": subject.subject_code
+                    }
+                
+                schedule_dict = {
+                    "id": schedule.id,
+                    "exam_event_id": schedule.exam_event_id,
+                    "subject_id": schedule.subject_id,
+                    "exam_date": str(schedule.exam_date) if schedule.exam_date else None,
+                    "start_time": schedule.start_time,
+                    "end_time": schedule.end_time,
+                    "duration_minutes": schedule.duration_minutes,
+                    "venue": schedule.venue or "",
+                    "max_students": schedule.max_students,
+                    "supervisor": schedule.supervisor or "",
+                    "total_marks": schedule.total_marks,
+                    "theory_marks": schedule.theory_marks,
+                    "practical_marks": schedule.practical_marks,
+                    "special_instructions": schedule.special_instructions or "",
+                    "materials_allowed": schedule.materials_allowed or "",
+                    "is_active": schedule.is_active,
+                    "created_at": str(schedule.created_at) if schedule.created_at else None,
+                    "updated_at": str(schedule.updated_at) if schedule.updated_at else None,
+                    "subject": subject_dict
+                }
+                result.append(schedule_dict)
+            except Exception as e:
+                print(f"Error processing schedule {schedule.id}: {e}")
+                continue
+        
+        return result
+    except Exception as e:
+        print(f"Error in read_exam_schedules: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/events/{event_id}/timetable", response_model=exam_schema.ExamTimetableResponse)
 def get_exam_timetable(
@@ -393,6 +443,9 @@ def bulk_update_marks(
     """
     Bulk update marks for students in an exam
     """
+    print(f"\n🎯 API ENDPOINT CALLED: /schedules/{schedule_id}/marks/bulk")
+    print(f"   Request data: {marks_request}")
+    
     exam_schedule = crud_exam_schedule.get(db, id=schedule_id)
     if not exam_schedule:
         raise HTTPException(
@@ -400,12 +453,17 @@ def bulk_update_marks(
             detail="Exam schedule not found"
         )
     
+    print(f"   Found exam schedule: {exam_schedule.id}")
+    print(f"   Calling crud_student_exam.bulk_update_marks...")
+    
     result = crud_student_exam.bulk_update_marks(
         db,
         exam_schedule_id=schedule_id,
         marks_data=marks_request.marks_data,
         entered_by=marks_request.entered_by
     )
+    
+    print(f"   Result: {result}")
     
     return result
 

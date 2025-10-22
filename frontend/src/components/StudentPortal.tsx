@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Student } from '@/types/student';
-import { getStudentsFromStorage } from '@/utils/studentUtils';
 import { 
   GraduationCap, 
   User, 
@@ -15,25 +15,37 @@ import {
   MapPin, 
   Calendar,
   BookOpen,
-  Search,
   ArrowLeft,
   IdCard,
-  Home
+  Home,
+  Lock,
+  Eye,
+  EyeOff,
+  LogOut,
+  Key
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import axios from 'axios';
+import ExamNotifications from './ExamNotifications';
 
 const StudentPortal = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) {
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
       toast({
-        title: "Search required",
-        description: "Please enter your roll number or email to search",
+        title: "Login required",
+        description: "Please enter your institutional email and password",
         variant: "destructive",
       });
       return;
@@ -42,46 +54,97 @@ const StudentPortal = () => {
     setIsLoading(true);
     
     try {
-      const students = getStudentsFromStorage();
-      const foundStudent = students.find(s => 
-        s.rollNumber.toLowerCase() === searchQuery.toLowerCase() ||
-        s.personalEmail.toLowerCase() === searchQuery.toLowerCase()
-      );
+      const response = await axios.post('/api/v1/students/auth/login', {
+        institutional_email: email,
+        password: password
+      });
 
-      if (foundStudent) {
-        setStudent(foundStudent);
+      if (response.data.student) {
+        setStudent(response.data.student);
         toast({
-          title: "Student found!",
-          description: `Welcome, ${foundStudent.name}`,
+          title: "Login successful!",
+          description: `Welcome, ${response.data.student.first_name} ${response.data.student.last_name}`,
         });
-      } else {
-        toast({
-          title: "Student not found",
-          description: "Please check your roll number or email and try again",
-          variant: "destructive",
-        });
-        setStudent(null);
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Search error",
-        description: "Unable to search for student. Please try again.",
+        title: "Login failed",
+        description: error.response?.data?.detail || "Incorrect email or password. Default password is 'Student@123'",
         variant: "destructive",
       });
+      setStudent(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
+  const handleChangePassword = async () => {
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      toast({
+        title: "All fields required",
+        description: "Please fill in all password fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "New password and confirm password must match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast({
+        title: "Password too short",
+        description: "New password must be at least 8 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await axios.post(`/api/v1/students/auth/change-password?student_id=${student?.id}`, {
+        old_password: oldPassword,
+        new_password: newPassword
+      });
+
+      toast({
+        title: "Password changed!",
+        description: "Your password has been updated successfully",
+      });
+
+      setShowChangePassword(false);
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      toast({
+        title: "Password change failed",
+        description: error.response?.data?.detail || "Could not change password. Please check your old password.",
+        variant: "destructive",
+      });
     }
   };
 
-  const clearSearch = () => {
-    setSearchQuery('');
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
+  };
+
+  const handleLogout = () => {
     setStudent(null);
+    setEmail('');
+    setPassword('');
+    setShowPassword(false);
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully",
+    });
   };
 
   return (
@@ -97,7 +160,7 @@ const StudentPortal = () => {
               <div className="flex items-center space-x-2">
                 <GraduationCap className="h-8 w-8 text-primary" />
                 <div>
-                  <h1 className="text-2xl font-bold text-foreground">CampusConnect</h1>
+                  <h1 className="text-2xl font-bold text-foreground">SCOEFLOW CONNECT</h1>
                   <p className="text-sm text-muted-foreground">Student Portal</p>
                 </div>
               </div>
@@ -112,44 +175,72 @@ const StudentPortal = () => {
 
       <main className="container mx-auto px-4 py-8">
         {!student ? (
-          /* Search Section */
+          /* Login Section */
           <div className="max-w-md mx-auto space-y-6">
             <Card className="shadow-hover">
               <CardHeader className="text-center">
                 <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Search className="h-8 w-8 text-primary" />
+                  <Lock className="h-8 w-8 text-primary" />
                 </div>
                 <CardTitle className="text-2xl">Student Login</CardTitle>
                 <CardDescription>
-                  Enter your roll number or email address to access your dashboard
+                  Enter your institutional email and password to access your dashboard
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="search">Roll Number or Email</Label>
+                  <Label htmlFor="email">Institutional Email</Label>
                   <Input
-                    id="search"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="e.g., 23CSE11234 or john.doe@student.college.edu"
-                    className="text-center"
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your institutional email"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Enter your password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Default password: <code className="bg-muted px-1 py-0.5 rounded">Student@123</code>
+                  </p>
+                </div>
                 <Button 
-                  onClick={handleSearch}
+                  onClick={handleLogin}
                   disabled={isLoading}
                   className="w-full bg-gradient-primary hover:bg-primary-hover"
                 >
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                      Searching...
+                      Logging in...
                     </div>
                   ) : (
                     <>
-                      <Search className="mr-2 h-4 w-4" />
-                      Access Dashboard
+                      <Lock className="mr-2 h-4 w-4" />
+                      Login
                     </>
                   )}
                 </Button>
@@ -163,15 +254,15 @@ const StudentPortal = () => {
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
-                  <IdCard className="h-4 w-4 text-muted-foreground" />
-                  <span>Use your college-issued roll number</span>
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span>Use your institutional email address</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>Or your student email address</span>
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                  <span>Default password is <code className="bg-muted px-1 py-0.5 rounded text-xs">Student@123</code></span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-4">
-                  Contact admin if you don't have your credentials
+                  Contact admin if you don't have your credentials or forgot your password
                 </p>
               </CardContent>
             </Card>
@@ -185,28 +276,36 @@ const StudentPortal = () => {
                 {student.photo ? (
                   <img 
                     src={student.photo} 
-                    alt={student.name}
+                    alt={`${student.first_name} ${student.last_name}`}
                     className="w-16 h-16 rounded-full object-cover border-2 border-primary"
                   />
                 ) : (
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                     <span className="text-primary font-bold text-lg">
-                      {student.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      {student.first_name[0]}{student.last_name[0]}
                     </span>
                   </div>
                 )}
                 <div>
-                  <h2 className="text-3xl font-bold text-foreground">{student.name}</h2>
-                  <p className="text-muted-foreground">{student.rollNumber}</p>
+                  <h2 className="text-3xl font-bold text-foreground">
+                    {student.first_name} {student.middle_name} {student.last_name}
+                  </h2>
+                  <p className="text-muted-foreground">{student.roll_number}</p>
                   <Badge variant="secondary" className="mt-1">
-                    {student.year} - {student.branch}
+                    {student.state} - {student.department}
                   </Badge>
                 </div>
               </div>
-              <Button variant="outline" onClick={clearSearch}>
-                <Search className="mr-2 h-4 w-4" />
-                Search Again
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowChangePassword(true)}>
+                  <Key className="mr-2 h-4 w-4" />
+                  Change Password
+                </Button>
+                <Button variant="outline" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -223,22 +322,22 @@ const StudentPortal = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <Label className="text-muted-foreground">Full Name</Label>
-                        <p className="font-medium">{student.name}</p>
+                        <p className="font-medium">{student.first_name} {student.middle_name} {student.last_name}</p>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-muted-foreground">Mother's Name</Label>
-                        <p className="font-medium">{student.motherName}</p>
+                        <p className="font-medium">{student.mother_name}</p>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-muted-foreground">Date of Birth</Label>
                         <p className="font-medium flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {new Date(student.dateOfBirth).toLocaleDateString()}
+                          {new Date(student.date_of_birth).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-muted-foreground">Gender</Label>
-                        <p className="font-medium">{student.gender}</p>
+                        <p className="font-medium capitalize">{student.gender}</p>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-muted-foreground">Category</Label>
@@ -248,7 +347,7 @@ const StudentPortal = () => {
                         <Label className="text-muted-foreground">Phone Number</Label>
                         <p className="font-medium flex items-center gap-2">
                           <Phone className="h-4 w-4 text-muted-foreground" />
-                          {student.phoneNumber}
+                          {student.phone}
                         </p>
                       </div>
                     </div>
@@ -271,50 +370,49 @@ const StudentPortal = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <Label className="text-muted-foreground">Branch</Label>
-                        <p className="font-medium">{student.branch}</p>
+                        <Label className="text-muted-foreground">Department</Label>
+                        <p className="font-medium">{student.department}</p>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-muted-foreground">Current Year</Label>
-                        <p className="font-medium">{student.year}</p>
+                        <Label className="text-muted-foreground">Current Semester</Label>
+                        <p className="font-medium">Semester {student.current_semester || 1}</p>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-muted-foreground">Roll Number</Label>
-                        <p className="font-medium">{student.rollNumber}</p>
+                        <p className="font-medium">{student.roll_number}</p>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-muted-foreground">Student Email</Label>
-                        <p className="font-medium flex items-center gap-2">
+                        <Label className="text-muted-foreground">Institutional Email</Label>
+                        <p className="font-medium flex items-center gap-2 text-sm">
                           <Mail className="h-4 w-4 text-muted-foreground" />
-                          {student.personalEmail}
+                          {student.institutional_email}
                         </p>
                       </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-muted-foreground">
-                        Enrolled Subjects ({student.subjects.length})
-                      </Label>
-                      {student.subjects.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {student.subjects.map((subject, index) => (
-                            <div key={index} className="p-3 bg-muted/50 rounded-lg">
-                              <p className="font-medium text-sm">{subject}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <BookOpen className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                          <p>No subjects assigned yet</p>
-                          <p className="text-sm">Contact your administrator to enroll in subjects</p>
-                        </div>
-                      )}
+                      <div className="space-y-1">
+                        <Label className="text-muted-foreground">Personal Email</Label>
+                        <p className="font-medium flex items-center gap-2 text-sm">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          {student.email}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-muted-foreground">Admission Year</Label>
+                        <p className="font-medium">{student.admission_year || 2024}</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Exam Notifications */}
+                <ExamNotifications
+                  studentId={student.id}
+                  studentName={`${student.first_name} ${student.middle_name} ${student.last_name}`}
+                  rollNumber={student.roll_number}
+                  department={student.department}
+                  semester={student.current_semester || 1}
+                />
               </div>
 
               {/* Quick Stats and Actions */}
@@ -327,16 +425,16 @@ const StudentPortal = () => {
                   <CardContent className="space-y-4">
                     <div className="text-center p-4 bg-gradient-card rounded-lg">
                       <div className="text-3xl font-bold text-primary mb-1">
-                        {student.subjects.length}
+                        {student.current_semester || 1}
                       </div>
-                      <p className="text-sm text-muted-foreground">Enrolled Subjects</p>
+                      <p className="text-sm text-muted-foreground">Current Semester</p>
                     </div>
                     
                     <div className="text-center p-4 bg-gradient-card rounded-lg">
-                      <div className="text-3xl font-bold text-primary mb-1">
-                        {student.year.charAt(0)}
+                      <div className="text-2xl font-bold text-primary mb-1">
+                        {student.state}
                       </div>
-                      <p className="text-sm text-muted-foreground">Current Year</p>
+                      <p className="text-sm text-muted-foreground">Academic Year</p>
                     </div>
 
                     <div className="text-center p-4 bg-gradient-card rounded-lg">
@@ -355,15 +453,15 @@ const StudentPortal = () => {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="text-sm">
-                      <Label className="text-muted-foreground">Registration Date</Label>
+                      <Label className="text-muted-foreground">Admission Number</Label>
                       <p className="font-medium">
-                        {new Date(student.createdAt).toLocaleDateString()}
+                        {student.admission_number}
                       </p>
                     </div>
                     <div className="text-sm">
-                      <Label className="text-muted-foreground">Last Updated</Label>
+                      <Label className="text-muted-foreground">Student ID</Label>
                       <p className="font-medium">
-                        {new Date(student.updatedAt).toLocaleDateString()}
+                        #{student.id}
                       </p>
                     </div>
                   </CardContent>
@@ -375,13 +473,18 @@ const StudentPortal = () => {
                     <CardTitle className="text-lg">Quick Actions</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full justify-start"
+                      onClick={() => setShowChangePassword(true)}
+                    >
+                      <Key className="mr-2 h-4 w-4" />
+                      Change Password
+                    </Button>
                     <Button variant="outline" size="sm" className="w-full justify-start">
                       <Mail className="mr-2 h-4 w-4" />
                       Contact Support
-                    </Button>
-                    <Button variant="outline" size="sm" className="w-full justify-start">
-                      <User className="mr-2 h-4 w-4" />
-                      Update Profile
                     </Button>
                     <Button variant="outline" size="sm" className="w-full justify-start">
                       <BookOpen className="mr-2 h-4 w-4" />
@@ -394,6 +497,58 @@ const StudentPortal = () => {
           </div>
         )}
       </main>
+
+      {/* Change Password Dialog */}
+      <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+            <DialogDescription>
+              Enter your current password and choose a new password (minimum 8 characters)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="old-password">Current Password</Label>
+              <Input
+                id="old-password"
+                type="password"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                placeholder="Enter current password"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min 8 characters)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm New Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowChangePassword(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleChangePassword}>
+              Change Password
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

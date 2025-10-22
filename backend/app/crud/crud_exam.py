@@ -2,7 +2,7 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc
 from datetime import date, datetime
-import json
+import logging
 
 from app.crud.base import CRUDBase
 from app.models.exam import (
@@ -19,6 +19,8 @@ from app.schemas.exam import (
     ExamResultCreate, ExamResultUpdate,
     BulkEnrollmentCreate, BulkMarksEntry
 )
+
+logger = logging.getLogger(__name__)
 
 # Utility function to map student year to semesters
 def get_semesters_for_year(year: str) -> List[int]:
@@ -295,12 +297,19 @@ class CRUDStudentExam(CRUDBase[StudentExam, StudentExamCreate, StudentExamUpdate
         
         updated_count = 0
         errors = []
+        
+        logger.info(f"\n🔍 bulk_update_marks called:")
+        logger.info(f"  Schedule ID: {exam_schedule_id}")
+        logger.info(f"  Marks data: {marks_data}")
+        logger.info(f"  Entered by: {entered_by}")
 
         for mark_entry in marks_data:
             try:
                 student_id = mark_entry.get("student_id")
                 theory_marks = mark_entry.get("theory_marks", 0)
                 practical_marks = mark_entry.get("practical_marks", 0)
+                
+                logger.info(f"\n  Processing student {student_id}: theory={theory_marks}, practical={practical_marks}")
                 
                 student_exam = db.query(StudentExam).filter(
                     and_(
@@ -310,12 +319,24 @@ class CRUDStudentExam(CRUDBase[StudentExam, StudentExamCreate, StudentExamUpdate
                 ).first()
 
                 if not student_exam:
-                    errors.append(f"Student exam record not found for student {student_id}")
-                    continue
+                    logger.info(f"    Creating new StudentExam record...")
+                    # Create new StudentExam record if it doesn't exist
+                    from app.models.exam import EnrollmentStatus
+                    student_exam = StudentExam(
+                        exam_schedule_id=exam_schedule_id,
+                        student_id=student_id,
+                        attendance_status=EnrollmentStatus.ENROLLED
+                    )
+                    db.add(student_exam)
+                    db.flush()  # Ensure the record is created before updating it
+                    logger.info(f"    ✅ Created StudentExam record with ID: {student_exam.id}")
+                else:
+                    logger.info(f"    Found existing StudentExam record with ID: {student_exam.id}")
 
                 # Calculate total marks and grade
                 total_marks = theory_marks + practical_marks
                 exam_schedule = db.query(ExamSchedule).filter(ExamSchedule.id == exam_schedule_id).first()
+                logger.info(f"    Total marks: {total_marks}, Schedule found: {exam_schedule is not None}")
                 
                 if exam_schedule:
                     percentage = (total_marks / exam_schedule.total_marks) * 100
@@ -345,18 +366,28 @@ class CRUDStudentExam(CRUDBase[StudentExam, StudentExamCreate, StudentExamUpdate
                     student_exam.is_pass = is_pass
                     student_exam.marks_entered_by = entered_by
                     student_exam.marks_entered_at = datetime.utcnow()
+                    
+                    logger.info(f"    ✅ Updated marks: theory={theory_marks}, grade={grade}")
 
                     updated_count += 1
 
             except Exception as e:
-                errors.append(f"Error updating marks for student {mark_entry.get('student_id', 'unknown')}: {str(e)}")
+                error_msg = f"Error updating marks for student {mark_entry.get('student_id', 'unknown')}: {str(e)}"
+                logger.error(f"    ❌ {error_msg}")
+                import traceback
+                traceback.print_exc()
+                errors.append(error_msg)
 
+        logger.info(f"\n  Committing {updated_count} updates...")
         db.commit()
+        logger.info(f"  ✅ Committed successfully!")
 
-        return {
+        result = {
             "updated_count": updated_count,
             "errors": errors
         }
+        logger.info(f"\n  Final result: {result}\n")
+        return result
 
 class CRUDExamResult(CRUDBase[ExamResult, ExamResultCreate, ExamResultUpdate]):
     def get_by_exam_event(self, db: Session, *, exam_event_id: int) -> List[ExamResult]:
