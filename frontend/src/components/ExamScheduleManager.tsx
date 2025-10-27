@@ -344,6 +344,36 @@ const ExamScheduleManager = ({ examEvent, onNavigateToEnrollment }: ExamSchedule
     }
   };
 
+  const handleClearAllSchedules = async () => {
+    if (!confirm(`Are you sure you want to delete ALL ${schedules.length} schedules for this exam? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      // Delete all schedules one by one
+      const deletePromises = schedules.map(schedule =>
+        fetch(`/api/v1/exams/schedules/${schedule.id}`, {
+          method: 'DELETE',
+        })
+      );
+
+      await Promise.all(deletePromises);
+
+      toast({
+        title: "All Schedules Cleared",
+        description: `Successfully deleted ${schedules.length} schedules for ${examEvent.name}`,
+      });
+
+      fetchSchedules();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear all schedules",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getSubjectName = (subjectId: number) => {
     const subject = subjects.find(s => s.id === subjectId) as any;
     console.log('Looking for subject ID:', subjectId);
@@ -414,6 +444,15 @@ const ExamScheduleManager = ({ examEvent, onNavigateToEnrollment }: ExamSchedule
                 <Calendar className="mr-2 h-4 w-4" />
                 Schedule All Semester Subjects
               </Button>
+              {schedules.length > 0 && (
+                <Button 
+                  onClick={handleClearAllSchedules}
+                  variant="destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Clear All Schedules
+                </Button>
+              )}
               {schedules.length > 0 && (
                 <div className="flex gap-3">
                   <Button 

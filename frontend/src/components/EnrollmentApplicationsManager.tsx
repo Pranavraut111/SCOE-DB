@@ -15,7 +15,8 @@ import {
   Clock,
   Trash2,
   Eye,
-  FileText
+  FileText,
+  Download
 } from "lucide-react";
 import axios from 'axios';
 
@@ -232,6 +233,59 @@ const EnrollmentApplicationsManager = ({ examEvent, adminEmail }: EnrollmentAppl
     return `Subject ID: ${subjectId}`;
   };
 
+  const handleExportEligibleStudents = () => {
+    const approvedApplications = allApplications.filter(a => a.application_status === 'APPROVED');
+    
+    if (approvedApplications.length === 0) {
+      toast({
+        title: "No Approved Students",
+        description: "There are no approved students to export",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create CSV header with just Roll Number, Student Name, and Subjects Enrolled
+    const header = ['Roll Number', 'Student Name', 'Subjects Enrolled'];
+    
+    // Create CSV rows
+    const rows = approvedApplications.map(app => {
+      const subjects = parseSubjects(app.selected_subjects);
+      const subjectCodes = subjects.map((subId: number) => {
+        const schedule = examSchedules.find(s => s.subject_id === subId);
+        return schedule?.subject?.code || `Subject ${subId}`;
+      }).join('; ');
+      
+      return [
+        app.roll_number,
+        app.student_name,
+        subjectCodes
+      ];
+    });
+    
+    // Combine header and rows
+    const csvContent = [header, ...rows]
+      .map(row => row.join(','))
+      .join('\n');
+    
+    // Create filename with event, dept, and semester
+    const filename = `${examEvent.name}_${examEvent.department.replace(/\s+/g, '_')}_Sem${examEvent.semester}.csv`;
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast({
+      title: "✅ Export Successful",
+      description: `Exported ${approvedApplications.length} eligible students`,
+    });
+  };
+
   const pendingCount = allApplications.filter(a => a.application_status === 'PENDING').length;
   const approvedCount = allApplications.filter(a => a.application_status === 'APPROVED').length;
   const rejectedCount = allApplications.filter(a => a.application_status === 'REJECTED').length;
@@ -240,13 +294,23 @@ const EnrollmentApplicationsManager = ({ examEvent, adminEmail }: EnrollmentAppl
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Student Enrollment Applications
-          </CardTitle>
-          <CardDescription>
-            Review and manage student applications for {examEvent.name}
-          </CardDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Student Enrollment Applications
+              </CardTitle>
+              <CardDescription>
+                Review and manage student applications for {examEvent.name}
+              </CardDescription>
+            </div>
+            {approvedCount > 0 && (
+              <Button onClick={handleExportEligibleStudents} variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export Eligible Students ({approvedCount})
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>

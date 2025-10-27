@@ -21,8 +21,8 @@ import ExamEventForm from './ExamEventForm';
 import ExamDashboard from './ExamDashboard';
 import ExamScheduleManager from './ExamScheduleManager';
 import EnrollmentApplicationsManager from './EnrollmentApplicationsManager';
-import MarksEntryManagerClean from './MarksEntryManagerClean';
-import ExamResultsViewer from './ExamResultsViewer';
+import ComponentMarksEntrySimple from './ComponentMarksEntrySimple';
+import ResultsManager from './ResultsManager';
 
 interface ExamEvent {
   id: number;
@@ -342,7 +342,7 @@ const ExaminationManagement = () => {
         {/* Marks Entry Tab */}
         <TabsContent value="marks">
           {selectedEvent ? (
-            <MarksEntryManagerClean examEvent={selectedEvent} />
+            <ComponentMarksEntrySimple examEvent={selectedEvent} />
           ) : (
             <Card>
               <CardContent className="text-center py-8">
@@ -361,22 +361,7 @@ const ExaminationManagement = () => {
 
         {/* Results Tab */}
         <TabsContent value="results">
-          {selectedEvent ? (
-            <ExamResultsViewer examEvent={selectedEvent} />
-          ) : (
-            <Card>
-              <CardContent className="text-center py-8">
-                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">No Event Selected</h3>
-                <p className="text-muted-foreground mb-4">
-                  Please select an exam event to view results
-                </p>
-                <Button onClick={() => setActiveTab('events')}>
-                  Go to Events
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+          <ResultsManager />
         </TabsContent>
       </Tabs>
     </div>

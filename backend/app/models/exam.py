@@ -268,3 +268,146 @@ class StudentEnrollmentApplication(Base):
     # Relationships
     exam_event = relationship("ExamEvent")
     student = relationship("Student")
+
+
+class StudentExamComponentMarks(Base):
+    """
+    Component-wise marks for students (IA1, IA2, Oral, ESE, etc.)
+    Tracks marks for each assessment component separately
+    """
+    __tablename__ = "student_exam_component_marks"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
+    subject_component_id = Column(Integer, ForeignKey("subject_components.id"), nullable=False)
+    exam_event_id = Column(Integer, ForeignKey("exam_events.id"), nullable=False)
+    
+    # Marks data
+    marks_obtained = Column(Float, nullable=False, default=0.0)
+    max_marks = Column(Float, nullable=False)
+    is_absent = Column(Boolean, default=False)
+    is_pass = Column(Boolean, default=False)
+    grade = Column(String(5))
+    
+    # Audit trail
+    marks_entered_by = Column(String(100))
+    marks_entered_at = Column(DateTime, default=datetime.utcnow)
+    verified_by = Column(String(100))
+    verified_at = Column(DateTime)
+    remarks = Column(Text)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    student = relationship("Student")
+    subject = relationship("Subject")
+    subject_component = relationship("SubjectComponent")
+    exam_event = relationship("ExamEvent")
+
+
+class SubjectFinalResult(Base):
+    """
+    Final aggregated result for a subject after all exams completed
+    Combines all component marks to generate final grade
+    """
+    __tablename__ = "subject_final_results"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
+    academic_year = Column(String(20), nullable=False)
+    semester = Column(Integer, nullable=False)
+    
+    # Component-wise aggregated marks
+    ia_marks = Column(Float, default=0.0)
+    ese_marks = Column(Float, default=0.0)
+    oral_marks = Column(Float, default=0.0)
+    practical_marks = Column(Float, default=0.0)
+    tw_marks = Column(Float, default=0.0)
+    
+    # Final totals
+    total_marks_obtained = Column(Float, nullable=False, default=0.0)
+    total_max_marks = Column(Float, nullable=False)
+    percentage = Column(Float, default=0.0)
+    
+    # Grading
+    grade = Column(String(5))
+    grade_points = Column(Float, default=0.0)
+    is_pass = Column(Boolean, default=False)
+    credits_earned = Column(Integer, default=0)
+    
+    # Component-wise passing status
+    ia_passing_status = Column(Boolean, default=False)
+    ese_passing_status = Column(Boolean, default=False)
+    oral_passing_status = Column(Boolean, default=False)
+    overall_passing_status = Column(Boolean, default=False)
+    
+    # Backlog tracking
+    is_backlog = Column(Boolean, default=False)
+    attempt_number = Column(Integer, default=1)
+    
+    # Metadata
+    calculated_at = Column(DateTime, default=datetime.utcnow)
+    calculated_by = Column(String(100))
+    remarks = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    student = relationship("Student")
+    subject = relationship("Subject")
+
+
+class SemesterResult(Base):
+    """
+    Overall semester performance with SGPA/CGPA calculation
+    Aggregates all subject results for semester-level metrics
+    """
+    __tablename__ = "semester_results"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    semester = Column(Integer, nullable=False)
+    academic_year = Column(String(20), nullable=False)
+    
+    # Credits summary
+    total_credits_attempted = Column(Integer, nullable=False, default=0)
+    total_credits_earned = Column(Integer, nullable=False, default=0)
+    total_credit_points = Column(Float, nullable=False, default=0.0)
+    
+    # GPA calculations
+    sgpa = Column(Float, default=0.0)
+    cgpa = Column(Float, default=0.0)
+    
+    # Subject counts
+    total_subjects = Column(Integer, nullable=False, default=0)
+    subjects_passed = Column(Integer, default=0)
+    subjects_failed = Column(Integer, default=0)
+    subjects_absent = Column(Integer, default=0)
+    
+    # Performance metrics
+    overall_percentage = Column(Float, default=0.0)
+    total_marks_obtained = Column(Float, default=0.0)
+    total_max_marks = Column(Float, default=0.0)
+    
+    # Result status
+    result_status = Column(String(50))
+    result_class = Column(String(100))
+    backlog_subjects = Column(Text)
+    has_backlogs = Column(Boolean, default=False)
+    
+    # Result declaration
+    result_declared = Column(Boolean, default=False)
+    result_declared_at = Column(DateTime)
+    result_declared_by = Column(String(100))
+    
+    # Metadata
+    remarks = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    student = relationship("Student")
