@@ -105,7 +105,7 @@ def delete_exam_event(
     return {"message": "Exam event deleted successfully"}
 
 # Exam Schedule Endpoints
-@router.post("/events/{event_id}/schedules/", response_model=exam_schema.ExamSchedule, status_code=status.HTTP_201_CREATED)
+@router.post("/events/{event_id}/schedules/", status_code=status.HTTP_201_CREATED)
 def create_exam_schedule(
     *,
     db: Session = Depends(get_db),
@@ -115,6 +115,8 @@ def create_exam_schedule(
     """
     Add a subject to the exam schedule
     """
+    from app.models.subject import Subject
+    
     # Verify exam event exists
     exam_event = crud_exam_event.get(db, id=event_id)
     if not exam_event:
@@ -157,7 +159,38 @@ def create_exam_schedule(
             )
     
     exam_schedule = crud_exam_schedule.create(db=db, obj_in=schedule_in)
-    return exam_schedule
+    
+    # Get subject details and return as dict
+    subject = db.query(Subject).filter(Subject.id == exam_schedule.subject_id).first()
+    subject_dict = None
+    if subject:
+        subject_dict = {
+            "id": subject.id,
+            "name": subject.subject_name,
+            "code": subject.subject_code
+        }
+    
+    return {
+        "id": exam_schedule.id,
+        "exam_event_id": exam_schedule.exam_event_id,
+        "subject_id": exam_schedule.subject_id,
+        "exam_date": str(exam_schedule.exam_date) if exam_schedule.exam_date else None,
+        "start_time": exam_schedule.start_time,
+        "end_time": exam_schedule.end_time,
+        "duration_minutes": exam_schedule.duration_minutes,
+        "venue": exam_schedule.venue or "",
+        "max_students": exam_schedule.max_students,
+        "supervisor": exam_schedule.supervisor or "",
+        "total_marks": exam_schedule.total_marks,
+        "theory_marks": exam_schedule.theory_marks,
+        "practical_marks": exam_schedule.practical_marks,
+        "special_instructions": exam_schedule.special_instructions or "",
+        "materials_allowed": exam_schedule.materials_allowed or "",
+        "is_active": exam_schedule.is_active,
+        "created_at": str(exam_schedule.created_at) if exam_schedule.created_at else None,
+        "updated_at": str(exam_schedule.updated_at) if exam_schedule.updated_at else None,
+        "subject": subject_dict
+    }
 
 @router.get("/events/{event_id}/schedules/")
 def read_exam_schedules(
