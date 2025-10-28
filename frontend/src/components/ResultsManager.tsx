@@ -311,7 +311,7 @@ const ResultsManager = () => {
         rows.push([
           student.roll_number,
           student.name,
-          '', '', '', '', '', '', '', '',
+          '', '', '', '', '', '', '',
           summary.sgpa.toFixed(2),
           summary.cgpa.toFixed(2),
           summary.overall_percentage.toFixed(1) + '%',
@@ -326,7 +326,6 @@ const ResultsManager = () => {
             subject.subject_name,
             subject.subject_code,
             subject.components.IA?.marks_obtained?.toString() || '-',
-            subject.components.IA?.marks_obtained?.toString() || '-',
             subject.components.OR?.marks_obtained?.toString() || '-',
             subject.components.ESE?.marks_obtained?.toString() || '-',
             `${subject.total_marks_obtained}/${subject.total_max_marks}`,
@@ -338,12 +337,12 @@ const ResultsManager = () => {
         });
         
         // Add empty row between students
-        rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+        rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '']);
       });
 
       const headers = [
         'Roll No', 'Student/Subject Name', 'Subject Code', 
-        'IA1', 'IA2', 'Oral', 'ESE', 
+        'IA', 'Viva', 'ESE', 
         'Total', 'Percentage', 'Grade',
         'SGPA', 'CGPA', 'Overall %', 'Status', 'Result Class'
       ];
@@ -573,7 +572,7 @@ const ResultsManager = () => {
               <div>
                 <h4 className="font-semibold text-blue-900 mb-1">Feature Note</h4>
                 <p className="text-sm text-blue-800">
-                  Bulk calculation will process all students automatically. Results are calculated based on component marks (IA, Oral, ESE) entered in the Marks Entry tab.
+                  Bulk calculation will process all students automatically. Results are calculated based on component marks (IA, Viva, ESE) entered in the Marks Entry tab.
                 </p>
               </div>
             </div>

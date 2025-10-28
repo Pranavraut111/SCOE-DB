@@ -272,7 +272,7 @@ class StudentEnrollmentApplication(Base):
 
 class StudentExamComponentMarks(Base):
     """
-    Component-wise marks for students (IA1, IA2, Oral, ESE, etc.)
+    Component-wise marks for students (IA, Viva, ESE, etc.)
     Tracks marks for each assessment component separately
     """
     __tablename__ = "student_exam_component_marks"

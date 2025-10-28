@@ -5,7 +5,7 @@
 ### Core Tables
 1. **students** - Core student information with authentication
 2. **subjects** - Subject master for academic years
-3. **subject_components** - Component-wise marks configuration (IA1, IA2, Oral, ESE)
+3. **subject_components** - Component-wise marks configuration (IA, Viva, ESE)
 
 ### Examination Tables
 4. **exam_events** - Exam sessions and metadata
@@ -15,7 +15,7 @@
 8. **student_exams** - Legacy exam attempts (parallel system)
 
 ### Component-Based Results System (Mumbai University Style)
-9. **student_exam_component_marks** - Component-wise marks (IA1, IA2, Oral, ESE)
+9. **student_exam_component_marks** - Component-wise marks (IA, Viva, ESE)
 10. **subject_final_results** - Aggregated subject results with grades
 11. **semester_results** - Semester SGPA/CGPA and result class
 
@@ -101,7 +101,7 @@
 ### subject_components
 - id (PK)
 - subject_id (FK)
-- component_type (IA1/IA2/ORAL/ESE)
+- component_type (IA/OR/ESE)
 - is_enabled (boolean)
 - out_of_marks (maximum marks for component)
 - passing_marks (minimum marks to pass)
@@ -125,7 +125,7 @@
 - id (PK)
 - student_id (FK)
 - subject_id (FK)
-- component_type (IA1/IA2/ORAL/ESE)
+- component_type (IA/OR/ESE)
 - academic_year (string)
 - semester (integer)
 - marks_obtained (float)
@@ -145,7 +145,7 @@
 - subject_id (FK)
 - academic_year (string)
 - semester (integer)
-- ia1_marks, ia2_marks, oral_marks, ese_marks (float, nullable)
+- ia_marks, oral_marks, ese_marks (float, nullable)
 - total_marks_obtained (float)
 - total_marks_possible (float)
 - percentage (float)
@@ -216,7 +216,7 @@
 
 ### Result Calculation Flow
 ```
-student_exam_component_marks (IA1, IA2, Oral, ESE)
+student_exam_component_marks (IA, Viva, ESE)
            ↓
     subject_final_results (Grade, SGPA calculation)
            ↓

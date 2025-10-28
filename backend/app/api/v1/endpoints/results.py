@@ -27,7 +27,7 @@ def bulk_create_component_marks(
 ):
     """
     Bulk enter component marks for multiple students
-    Use this after IA1, IA2, Oral, or ESE exam
+    Use this after IA, Viva, or ESE exam
     
     Example:
     {
@@ -104,7 +104,7 @@ def get_student_component_marks(
 ):
     """
     Get all component marks for a student's subject
-    Shows IA1, IA2, Oral, ESE marks separately
+    Shows IA, Viva, ESE marks separately
     """
     marks = db.query(StudentExamComponentMarks).filter(
         StudentExamComponentMarks.student_id == student_id,
@@ -186,7 +186,7 @@ def calculate_subject_result(
 ):
     """
     Calculate final result for a subject
-    Aggregates all component marks (IA1, IA2, Oral, ESE)
+    Aggregates all component marks (IA, Viva, ESE)
     
     Example: /results/subject/calculate?student_id=10&subject_id=5&academic_year=2024-25&semester=1
     """

@@ -209,9 +209,8 @@ const DetailedResultSheet: React.FC<DetailedResultSheetProps> = ({
                   <th className="p-3 text-left text-sm font-medium text-gray-700">Subject Code</th>
                   <th className="p-3 text-left text-sm font-medium text-gray-700">Subject Name</th>
                   <th className="p-3 text-center text-sm font-medium text-gray-700">Credits</th>
-                  <th className="p-3 text-center text-sm font-medium text-gray-700">IA1</th>
-                  <th className="p-3 text-center text-sm font-medium text-gray-700">IA2</th>
-                  <th className="p-3 text-center text-sm font-medium text-gray-700">Oral</th>
+                  <th className="p-3 text-center text-sm font-medium text-gray-700">IA</th>
+                  <th className="p-3 text-center text-sm font-medium text-gray-700">Viva</th>
                   <th className="p-3 text-center text-sm font-medium text-gray-700">ESE</th>
                   <th className="p-3 text-center text-sm font-medium text-gray-700">Total</th>
                   <th className="p-3 text-center text-sm font-medium text-gray-700">%</th>
@@ -222,8 +221,7 @@ const DetailedResultSheet: React.FC<DetailedResultSheetProps> = ({
                   <th colSpan={3} className="p-2 text-left">Max Marks →</th>
                   <th className="p-2 text-center">20</th>
                   <th className="p-2 text-center">20</th>
-                  <th className="p-2 text-center">10</th>
-                  <th className="p-2 text-center">50</th>
+                  <th className="p-2 text-center">60</th>
                   <th className="p-2 text-center">100</th>
                   <th colSpan={3}></th>
                 </tr>
@@ -234,7 +232,6 @@ const DetailedResultSheet: React.FC<DetailedResultSheetProps> = ({
                     <td className="p-3 font-medium text-sm">{subject.subject_code}</td>
                     <td className="p-3 text-sm">{subject.subject_name}</td>
                     <td className="p-3 text-center text-sm">{subject.credits}</td>
-                    <td className="p-3 text-center text-sm">{getComponentStatus(subject.components.IA)}</td>
                     <td className="p-3 text-center text-sm">{getComponentStatus(subject.components.IA)}</td>
                     <td className="p-3 text-center text-sm">{getComponentStatus(subject.components.OR)}</td>
                     <td className="p-3 text-center text-sm">{getComponentStatus(subject.components.ESE)}</td>
@@ -282,9 +279,8 @@ const DetailedResultSheet: React.FC<DetailedResultSheetProps> = ({
                   'Subject Code': s.subject_code,
                   'Subject Name': s.subject_name,
                   'Credits': s.credits,
-                  'IA1': s.components.IA?.marks_obtained || '-',
-                  'IA2': s.components.IA?.marks_obtained || '-',
-                  'Oral': s.components.OR?.marks_obtained || '-',
+                  'IA': s.components.IA?.marks_obtained || '-',
+                  'Viva': s.components.OR?.marks_obtained || '-',
                   'ESE': s.components.ESE?.marks_obtained || '-',
                   'Total': `${s.total_marks_obtained}/${s.total_max_marks}`,
                   'Percentage': s.percentage.toFixed(1),

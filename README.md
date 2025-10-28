@@ -22,7 +22,7 @@ A comprehensive campus management system for modern educational institutions. Fu
 
 ### **Subject Master**
 - ✅ Mumbai University subject catalog (6 departments)
-- ✅ Component configuration (IA1, IA2, Oral, ESE)
+- ✅ Component configuration (IA 20 marks, Viva 20 marks, ESE 60 marks)
 - ✅ Credit system and passing criteria
 - ✅ Department and semester-wise organization
 
@@ -35,7 +35,7 @@ A comprehensive campus management system for modern educational institutions. Fu
 - ✅ Attendance tracking
 
 ### **Result Generation (Mumbai University Style)**
-- ✅ Component-based marks tracking (IA1, IA2, Oral, ESE)
+- ✅ Component-based marks tracking (IA 20 marks, Viva 20 marks, ESE 60 marks)
 - ✅ **Component-wise passing enforcement** - Students must pass each component individually
 - ✅ Automatic grade calculation (A+ to F)
 - ✅ SGPA/CGPA computation
@@ -79,7 +79,7 @@ A comprehensive campus management system for modern educational institutions. Fu
 ### **Core Tables**
 1. **students** - Student information + authentication
 2. **subjects** - Subject master with component configuration
-3. **subject_components** - IA1, IA2, Oral, ESE configuration
+3. **subject_components** - IA, Viva, ESE configuration
 4. **exam_events** - Exam sessions
 5. **exam_schedules** - Exam timetable
 
@@ -88,7 +88,7 @@ A comprehensive campus management system for modern educational institutions. Fu
 7. **student_exam_enrollments** - Approved enrollments
 
 ### **Results Tables**
-8. **student_exam_component_marks** - Component-wise marks (IA1, IA2, Oral, ESE)
+8. **student_exam_component_marks** - Component-wise marks (IA, Viva, ESE)
 9. **subject_final_results** - Aggregated subject results with grades
 10. **semester_results** - SGPA/CGPA results
 11. **published_results** - Published results tracking
@@ -230,7 +230,7 @@ npm run dev
 3. System fetches detailed result with all subject marks
 4. Downloads CSV with:
    - Roll number, name
-   - Subject-wise marks (IA1, IA2, Oral, ESE)
+   - Subject-wise marks (IA, Viva, ESE)
    - Total marks, percentage, grade
    - SGPA, CGPA, Result Class
 
@@ -250,10 +250,10 @@ npm run dev
 | F     | 0           | 0-39%      |
 
 ### **Component-Wise Passing**
-- Student must pass EACH component (IA1, IA2, Oral, ESE) individually
+- Student must pass EACH component (IA, Viva, ESE) individually
 - Passing marks: Typically 40% of max marks for each component
 - Overall percentage must also be >= 40%
-- **Example:** Student with 50% total but failed IA1 = FAIL
+- **Example:** Student with 50% total but failed IA = FAIL
 
 ### **Result Class**
 - **First Class with Distinction**: SGPA >= 7.5
