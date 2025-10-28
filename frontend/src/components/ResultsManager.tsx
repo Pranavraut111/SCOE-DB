@@ -21,6 +21,7 @@ import {
   Printer
 } from "lucide-react";
 import ProfessionalResultSheet from './ProfessionalResultSheet';
+import DetailedResultSheet from './DetailedResultSheet';
 
 interface Student {
   id: number;
@@ -69,6 +70,7 @@ const ResultsManager = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [showResultSheet, setShowResultSheet] = useState(false);
+  const [showDetailedView, setShowDetailedView] = useState(false);
 
   useEffect(() => {
     fetchStudents();
@@ -236,36 +238,138 @@ const ResultsManager = () => {
     setShowResultSheet(true);
   };
 
-  const handleExportAll = () => {
-    // Create CSV export
-    const headers = ['Roll No', 'Student Name', 'Subjects', 'Passed', 'Failed', 'Credits', 'SGPA', 'CGPA', 'Percentage', 'Status', 'Result Class'];
-    const rows = semesterResults.map(r => [
-      r.roll_number,
-      r.student_name,
-      r.total_subjects,
-      r.subjects_passed,
-      r.subjects_failed,
-      `${r.total_credits_earned}/${r.total_credits_attempted}`,
-      r.sgpa.toFixed(2),
-      r.cgpa.toFixed(2),
-      r.overall_percentage.toFixed(1) + '%',
-      r.result_status,
-      r.result_class
-    ]);
+  const handlePublishResults = async () => {
+    try {
+      setIsLoading(true);
+      
+      const studentIds = semesterResults.map(r => r.student_id);
+      
+      // Publish results for all students in this semester
+      const queryParams = new URLSearchParams({
+        department,
+        semester: semester.toString(),
+        academic_year: academicYear
+      });
+      
+      // Add each student_id as a separate query parameter
+      studentIds.forEach(id => queryParams.append('student_ids', id.toString()));
+      
+      const response = await fetch(`/api/v1/results/publish?${queryParams.toString()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `semester_results_${department.replace(/\s+/g, '_')}_Sem${semester}_${academicYear}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: "✅ Results Published!",
+          description: `Published results for ${data.published_count} new students. Students can now view their results in the Student Portal.`,
+        });
+      } else {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to publish');
+      }
+    } catch (error: any) {
+      toast({
+        title: "❌ Publish Failed",
+        description: error.message || "Failed to publish results to students",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    toast({
-      title: "✅ Export Successful",
-      description: `Exported ${semesterResults.length} student results`,
-    });
+  const handleExportAll = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch detailed results for all students
+      const detailedResults = await Promise.all(
+        semesterResults.map(async (result) => {
+          const response = await fetch(
+            `/api/v1/results/detailed-result-sheet/${result.student_id}?academic_year=${academicYear}&semester=${semester}`
+          );
+          if (response.ok) {
+            return await response.json();
+          }
+          return null;
+        })
+      );
+
+      // Create CSV with subject-wise details
+      const rows: string[][] = [];
+      
+      detailedResults.forEach((data) => {
+        if (!data) return;
+        
+        const student = data.student;
+        const subjects = data.subjects;
+        const summary = data.semester_summary;
+        
+        // Add student header row
+        rows.push([
+          student.roll_number,
+          student.name,
+          '', '', '', '', '', '', '', '',
+          summary.sgpa.toFixed(2),
+          summary.cgpa.toFixed(2),
+          summary.overall_percentage.toFixed(1) + '%',
+          summary.result_status,
+          summary.result_class
+        ]);
+        
+        // Add subject rows
+        subjects.forEach((subject: any) => {
+          rows.push([
+            '', // Roll number (empty for subject rows)
+            subject.subject_name,
+            subject.subject_code,
+            subject.components.IA?.marks_obtained?.toString() || '-',
+            subject.components.IA?.marks_obtained?.toString() || '-',
+            subject.components.OR?.marks_obtained?.toString() || '-',
+            subject.components.ESE?.marks_obtained?.toString() || '-',
+            `${subject.total_marks_obtained}/${subject.total_max_marks}`,
+            subject.percentage.toFixed(1) + '%',
+            subject.grade,
+            '', '', '', '',
+            subject.is_pass ? 'Pass' : 'Fail'
+          ]);
+        });
+        
+        // Add empty row between students
+        rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+      });
+
+      const headers = [
+        'Roll No', 'Student/Subject Name', 'Subject Code', 
+        'IA1', 'IA2', 'Oral', 'ESE', 
+        'Total', 'Percentage', 'Grade',
+        'SGPA', 'CGPA', 'Overall %', 'Status', 'Result Class'
+      ];
+      
+      const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `detailed_results_${department.replace(/\s+/g, '_')}_Sem${semester}_${academicYear}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "✅ Export Successful",
+        description: `Exported detailed results for ${semesterResults.length} students`,
+      });
+    } catch (error) {
+      toast({
+        title: "❌ Export Failed",
+        description: "Failed to export detailed results",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -289,8 +393,10 @@ const ResultsManager = () => {
                 <SelectContent>
                   <SelectItem value="Computer Science Engineering">Computer Science Engineering</SelectItem>
                   <SelectItem value="Information Technology">Information Technology</SelectItem>
-                  <SelectItem value="Electronics Engineering">Electronics Engineering</SelectItem>
+                  <SelectItem value="Electronics and Communication Engineering">Electronics and Communication Engineering</SelectItem>
+                  <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
                   <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
+                  <SelectItem value="Civil Engineering">Civil Engineering</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -368,10 +474,20 @@ const ResultsManager = () => {
               <CardTitle>Semester Results - All Students</CardTitle>
               <CardDescription>SGPA, CGPA, and overall performance</CardDescription>
             </div>
-            <Button variant="outline" onClick={() => handleExportAll()}>
-              <Download className="h-4 w-4 mr-2" />
-              Export All Results
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => handleExportAll()}>
+                <Download className="h-4 w-4 mr-2" />
+                Export All Results
+              </Button>
+              <Button 
+                onClick={handlePublishResults}
+                className="bg-green-600 hover:bg-green-700"
+                disabled={semesterResults.length === 0 || isLoading}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Publish Results to Students
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -429,10 +545,14 @@ const ResultsManager = () => {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => handleViewResultSheet(result.student_id)}
+                          onClick={() => {
+                            setSelectedStudentId(result.student_id);
+                            setShowDetailedView(true);
+                          }}
+                          className="flex items-center gap-1"
                         >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View Result
+                          <Eye className="h-3 w-3" />
+                          View Details
                         </Button>
                       </td>
                     </tr>
@@ -459,6 +579,22 @@ const ResultsManager = () => {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Detailed Result Sheet Modal */}
+      {showDetailedView && selectedStudentId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-7xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <DetailedResultSheet
+                studentId={selectedStudentId}
+                academicYear={academicYear}
+                semester={semester}
+                onClose={() => setShowDetailedView(false)}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Result Sheet Modal */}

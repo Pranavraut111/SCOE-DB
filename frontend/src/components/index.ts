@@ -3,12 +3,10 @@ export { default as ExamEventForm } from './ExamEventForm';
 export { default as ExamDashboard } from './ExamDashboard';
 export { default as ExamScheduleManager } from './ExamScheduleManager';
 export { default as StudentEnrollmentManager } from './StudentEnrollmentManager';
-export { default as MarksEntryManager } from './MarksEntryManager';
 export { default as ComponentMarksEntrySimple } from './ComponentMarksEntrySimple';
 export { default as ResultsManager } from './ResultsManager';
 export { default as ProfessionalResultSheet } from './ProfessionalResultSheet';
-export { default as ExamResultsViewer } from './ExamResultsViewer';
-export { default as SemesterResultsView } from './SemesterResultsView';
+export { default as DetailedResultSheet } from './DetailedResultSheet';
 export { default as ExaminationManagement } from './ExaminationManagement';
 
 // Export other existing components

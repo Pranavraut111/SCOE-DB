@@ -223,8 +223,18 @@ def calculate_subject_result(
     # Calculate grade
     grade, grade_points = result_calculator.calculate_grade(percentage)
     
-    # Determine if passed
-    is_pass = percentage >= 40
+    # Determine if passed - MUST pass EACH component individually
+    component_pass_status = []
+    for mark in component_marks:
+        if mark.subject_component:
+            component_percentage = (mark.marks_obtained / mark.max_marks * 100) if mark.max_marks > 0 else 0
+            passing_marks = mark.subject_component.passing_marks
+            passing_percentage = (passing_marks / mark.max_marks * 100) if mark.max_marks > 0 else 40
+            component_passed = component_percentage >= passing_percentage
+            component_pass_status.append(component_passed)
+    
+    # Student must pass ALL components AND overall percentage >= 40%
+    is_pass = all(component_pass_status) and percentage >= 40
     credits_earned = subject.credits if is_pass else 0
     
     # Create or update subject final result
@@ -521,3 +531,222 @@ def get_all_semester_results(
             })
     
     return results
+
+
+@router.post("/publish")
+def publish_results(
+    department: str = Query(...),
+    semester: int = Query(...),
+    academic_year: str = Query(...),
+    student_ids: List[int] = Query(...),
+    db: Session = Depends(deps.get_db)
+):
+    """
+    Publish results to students - makes results visible in student portal
+    """
+    from sqlalchemy import text
+    
+    published_count = 0
+    
+    for student_id in student_ids:
+        # Check if already published
+        existing = db.execute(text("""
+            SELECT id FROM published_results 
+            WHERE student_id = :student_id 
+            AND semester = :semester 
+            AND academic_year = :academic_year
+        """), {
+            "student_id": student_id,
+            "semester": semester,
+            "academic_year": academic_year
+        }).first()
+        
+        if not existing:
+            # Insert new published result
+            db.execute(text("""
+                INSERT INTO published_results 
+                (student_id, semester, academic_year, department, published_by)
+                VALUES (:student_id, :semester, :academic_year, :department, 'Admin')
+            """), {
+                "student_id": student_id,
+                "semester": semester,
+                "academic_year": academic_year,
+                "department": department
+            })
+            published_count += 1
+    
+    db.commit()
+    
+    return {
+        "message": "Results published successfully",
+        "published_count": published_count,
+        "total_students": len(student_ids)
+    }
+
+
+@router.get("/student-published/{student_id}")
+def get_student_published_results(
+    student_id: int,
+    db: Session = Depends(deps.get_db)
+):
+    """
+    Get all published results for a student (for student portal)
+    """
+    from sqlalchemy import text
+    
+    results = db.execute(text("""
+        SELECT 
+            pr.semester,
+            pr.academic_year,
+            pr.department,
+            pr.published_at,
+            pr.is_viewed,
+            sr.sgpa,
+            sr.cgpa,
+            sr.result_status,
+            sr.result_class,
+            sr.subjects_passed,
+            sr.subjects_failed
+        FROM published_results pr
+        LEFT JOIN semester_results sr ON 
+            pr.student_id = sr.student_id AND
+            pr.semester = sr.semester AND
+            pr.academic_year = sr.academic_year
+        WHERE pr.student_id = :student_id
+        ORDER BY pr.published_at DESC
+    """), {"student_id": student_id}).fetchall()
+    
+    return [{
+        "semester": r[0],
+        "academic_year": r[1],
+        "department": r[2],
+        "published_at": r[3],
+        "is_viewed": r[4],
+        "sgpa": float(r[5]) if r[5] else 0.0,
+        "cgpa": float(r[6]) if r[6] else 0.0,
+        "result_status": r[7],
+        "result_class": r[8],
+        "subjects_passed": r[9] or 0,
+        "subjects_failed": r[10] or 0
+    } for r in results]
+
+
+@router.put("/mark-viewed/{student_id}")
+def mark_result_viewed(
+    student_id: int,
+    semester: int = Query(...),
+    academic_year: str = Query(...),
+    db: Session = Depends(deps.get_db)
+):
+    """
+    Mark result as viewed by student
+    """
+    from sqlalchemy import text
+    
+    db.execute(text("""
+        UPDATE published_results 
+        SET is_viewed = TRUE, viewed_at = NOW()
+        WHERE student_id = :student_id 
+        AND semester = :semester 
+        AND academic_year = :academic_year
+    """), {
+        "student_id": student_id,
+        "semester": semester,
+        "academic_year": academic_year
+    })
+    
+    db.commit()
+    
+    return {"message": "Result marked as viewed"}
+
+
+@router.get("/detailed-result-sheet/{student_id}")
+def get_detailed_result_sheet(
+    student_id: int,
+    academic_year: str = Query(...),
+    semester: int = Query(...),
+    db: Session = Depends(deps.get_db)
+):
+    """
+    Get detailed result sheet with all subject-wise component marks
+    Similar to Mumbai University official result format
+    """
+    # Get student details
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Get all subject results for this student
+    subject_results = db.query(SubjectFinalResult).filter(
+        SubjectFinalResult.student_id == student_id,
+        SubjectFinalResult.semester == semester,
+        SubjectFinalResult.academic_year == academic_year
+    ).all()
+    
+    detailed_subjects = []
+    for sub_result in subject_results:
+        # Get subject details
+        subject = db.query(Subject).filter(Subject.id == sub_result.subject_id).first()
+        
+        # Get all component marks for this subject
+        component_marks = db.query(StudentExamComponentMarks).filter(
+            StudentExamComponentMarks.student_id == student_id,
+            StudentExamComponentMarks.subject_id == sub_result.subject_id
+        ).all()
+        
+        # Organize marks by component type
+        components = {}
+        for mark in component_marks:
+            if mark.subject_component:
+                comp_type = mark.subject_component.component_type.value
+                components[comp_type] = {
+                    "marks_obtained": mark.marks_obtained,
+                    "max_marks": mark.max_marks,
+                    "passing_marks": mark.subject_component.passing_marks,
+                    "is_pass": mark.marks_obtained >= mark.subject_component.passing_marks
+                }
+        
+        detailed_subjects.append({
+            "subject_code": subject.subject_code if subject else "",
+            "subject_name": subject.subject_name if subject else "",
+            "credits": subject.credits if subject else 0,
+            "components": components,
+            "total_marks_obtained": sub_result.total_marks_obtained,
+            "total_max_marks": sub_result.total_max_marks,
+            "percentage": sub_result.percentage,
+            "grade": sub_result.grade,
+            "grade_points": sub_result.grade_points,
+            "is_pass": sub_result.is_pass,
+            "credits_earned": sub_result.credits_earned
+        })
+    
+    # Get semester result
+    sem_result = db.query(SemesterResult).filter(
+        SemesterResult.student_id == student_id,
+        SemesterResult.semester == semester,
+        SemesterResult.academic_year == academic_year
+    ).first()
+    
+    return {
+        "student": {
+            "id": student.id,
+            "name": f"{student.first_name} {student.middle_name} {student.last_name}".strip(),
+            "roll_number": student.roll_number,
+            "department": student.department,
+            "semester": semester,
+            "academic_year": academic_year
+        },
+        "subjects": detailed_subjects,
+        "semester_summary": {
+            "total_subjects": sem_result.total_subjects if sem_result else 0,
+            "subjects_passed": sem_result.subjects_passed if sem_result else 0,
+            "subjects_failed": sem_result.subjects_failed if sem_result else 0,
+            "total_credits_attempted": sem_result.total_credits_attempted if sem_result else 0,
+            "total_credits_earned": sem_result.total_credits_earned if sem_result else 0,
+            "sgpa": sem_result.sgpa if sem_result else 0.0,
+            "cgpa": sem_result.cgpa if sem_result else 0.0,
+            "overall_percentage": sem_result.overall_percentage if sem_result else 0.0,
+            "result_status": sem_result.result_status if sem_result else "PENDING",
+            "result_class": sem_result.result_class if sem_result else "N/A"
+        }
+    }

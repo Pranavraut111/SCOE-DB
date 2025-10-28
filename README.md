@@ -1,650 +1,523 @@
 # SCOEFLOW CONNECT 🎓
 
-A comprehensive student management system designed for modern educational institutions. This full-stack application provides seamless student data management, bulk operations, and intuitive user interfaces for both administrators and students.
+A comprehensive campus management system for modern educational institutions. Full-stack application with student management, examination system, and Mumbai University-compliant result generation.
 
-![SCOEFLOW CONNECT](./scoe-logo.png)
+---
 
-## 🌟 Overview
+## 🌟 Key Features
 
-SCOEFLOW CONNECT is a modern campus management platform that streamlines educational administration through:
+### **Student Management**
+- ✅ Complete student information system with photo uploads
+- ✅ Bulk import/export via Excel/CSV with validation
+- ✅ Search, filter, and pagination
+- ✅ Student authentication with secure password management
+- ✅ Student portal for exam enrollment and result viewing
 
-- **Student Information Management**: Complete student lifecycle management with photo uploads
-- **Bulk Operations**: Excel/CSV import/export with validation and error handling
-- **Subject Management**: Comprehensive subject master with Mumbai University integration
-- **Examination Management**: Complete exam lifecycle from creation to result generation
-- **Role-based Access**: Separate portals for administrators and students
-- **Data Analytics**: Export capabilities and reporting features
-- **Modern UI**: Built with React, TypeScript, and shadcn/ui components
+### **Authentication & Security**
+- ✅ Admin authentication with environment-based credentials
+- ✅ Student login with institutional email
+- ✅ Bcrypt password hashing
+- ✅ Session management and logout functionality
+- ✅ Password change capability
 
-## 🏗️ Architecture
+### **Subject Master**
+- ✅ Mumbai University subject catalog (6 departments)
+- ✅ Component configuration (IA1, IA2, Oral, ESE)
+- ✅ Credit system and passing criteria
+- ✅ Department and semester-wise organization
 
-### System Architecture Flow
+### **Examination Management**
+- ✅ Exam event creation (IA, Oral, ESE, Semester)
+- ✅ Exam scheduling with venue and timing
+- ✅ Student enrollment application system
+- ✅ Admin approval/rejection workflow
+- ✅ Component-wise marks entry
+- ✅ Attendance tracking
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │    │     Backend      │    │    Database     │
-│   (React TS)    │◄──►│   (FastAPI)      │◄──►│    (MySQL)      │
-│                 │    │                  │    │                 │
-│ • Landing Page  │    │ • REST APIs      │    │ • Students      │
-│ • Admin Portal  │    │ • File Upload    │    │ • Subjects      │
-│ • Student Portal│    │ • Data Export    │    │ • Examinations  │
-│ • Exam Portal   │    │ • Exam Management│    │ • Relationships │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
+### **Result Generation (Mumbai University Style)**
+- ✅ Component-based marks tracking (IA1, IA2, Oral, ESE)
+- ✅ **Component-wise passing enforcement** - Students must pass each component individually
+- ✅ Automatic grade calculation (A+ to F)
+- ✅ SGPA/CGPA computation
+- ✅ Result class determination (First Class with Distinction, etc.)
+- ✅ Detailed subject-wise result view
+- ✅ CSV export with complete breakdown
+- ✅ Publish results to students
+- ✅ Student result download from portal
 
-### Project Structure
+---
 
-```
-PROJECTSCOE2/
-├── src/                          # Frontend React Application
-│   ├── components/               # Reusable UI Components
-│   │   ├── ui/                  # shadcn/ui components
-│   │   ├── AdminLayout.tsx      # Admin dashboard layout
-│   │   ├── BulkUpload.tsx       # File upload component
-│   │   ├── LandingPage.tsx      # Homepage
-│   │   ├── StudentEntryForm.tsx # Student creation form
-│   │   ├── StudentList.tsx      # Student data grid
-│   │   ├── StudentPortal.tsx    # Student dashboard
-│   │   ├── SubjectMaster.tsx    # Subject management
-│   │   ├── ExaminationManagement.tsx # Exam system main
-│   │   ├── ExamEventForm.tsx    # Exam event creation
-│   │   ├── ExamDashboard.tsx    # Exam statistics
-│   │   ├── ExamScheduleManager.tsx # Exam scheduling
-│   │   ├── StudentEnrollmentManager.tsx # Student enrollment
-│   │   ├── MarksEntryManager.tsx # Marks entry system
-│   │   └── ExamResultsViewer.tsx # Results and analytics
-│   ├── pages/                   # Route components
-│   │   ├── AdminDashboard.tsx   # Admin main page
-│   │   ├── Index.tsx           # Landing page route
-│   │   └── NotFound.tsx        # 404 page
-│   ├── hooks/                   # Custom React hooks
-│   ├── lib/                     # Utilities and API client
-│   └── types/                   # TypeScript definitions
-├── backend/                      # FastAPI Backend
-│   ├── app/
-│   │   ├── api/                 # API routes
-│   │   │   └── v1/endpoints/    # API endpoints
-│   │   │       ├── students.py  # Student CRUD operations
-│   │   │       ├── subjects.py  # Subject management
-│   │   │       └── exams.py     # Examination management
-│   │   ├── core/                # Core configuration
-│   │   │   └── config.py        # App settings
-│   │   ├── crud/                # Database operations
-│   │   ├── db/                  # Database setup
-│   │   ├── models/              # SQLAlchemy models
-│   │   ├── schemas/             # Pydantic schemas
-│   │   ├── services/            # Business logic
-│   │   └── data/                # Static data (MU subjects)
-│   ├── .env                     # Environment variables
-│   └── requirements.txt         # Python dependencies
-├── public/                       # Static assets
-├── package.json                 # Node.js dependencies
-└── README.md                    # This file
-```
+## 🏗️ Technology Stack
 
-## 🚀 Quick Start
+### **Frontend**
+- React 18 + TypeScript
+- Vite (Build tool)
+- TailwindCSS (Styling)
+- shadcn/ui (Component library)
+- React Hook Form + Zod (Form validation)
+- Axios (HTTP client)
+- Lucide React (Icons)
 
-### Prerequisites
+### **Backend**
+- FastAPI (Python web framework)
+- SQLAlchemy (ORM)
+- MySQL (Database)
+- Pydantic (Data validation)
+- Bcrypt (Password hashing)
+- Python-Jose (JWT tokens)
 
-- **Node.js** (v18 or higher)
-- **Python** (v3.8 or higher)
-- **MySQL** (v8.0 or higher)
-- **Git**
+### **Database**
+- MySQL 8.0+
+- 13 tables with proper relationships
+- Foreign key constraints
+- Unique constraints on critical fields
 
-### Installation
+---
 
-#### 1. Clone the Repository
+## 📊 Database Schema
+
+### **Core Tables**
+1. **students** - Student information + authentication
+2. **subjects** - Subject master with component configuration
+3. **subject_components** - IA1, IA2, Oral, ESE configuration
+4. **exam_events** - Exam sessions
+5. **exam_schedules** - Exam timetable
+
+### **Enrollment Tables**
+6. **student_enrollment_applications** - Student applications
+7. **student_exam_enrollments** - Approved enrollments
+
+### **Results Tables**
+8. **student_exam_component_marks** - Component-wise marks (IA1, IA2, Oral, ESE)
+9. **subject_final_results** - Aggregated subject results with grades
+10. **semester_results** - SGPA/CGPA results
+11. **published_results** - Published results tracking
+
+### **Supporting Tables**
+12. **student_progression_history** - Academic progression
+13. **student_exams** - Legacy system (parallel)
+
+---
+
+## 🚀 Getting Started
+
+### **Prerequisites**
+- Python 3.9+
+- Node.js 18+
+- MySQL 8.0+
+
+### **Backend Setup**
 
 ```bash
-git clone <repository-url>
-cd PROJECTSCOE2
+# Navigate to backend
+cd backend
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your MySQL credentials
+
+# Initialize database
+python init_db.py
+python init_subject_db.py
+
+# Run migrations
+python migrate_add_password.py
+python migrate_add_enrollment_applications.py
+python migrate_add_result_system.py
+python migrate_add_student_progression.py
+python migrate_add_published_results.py
+
+# Start server
+uvicorn app.main:app --reload
 ```
 
-#### 2. Frontend Setup
+**Backend runs on:** `http://localhost:8000`
+
+### **Frontend Setup**
 
 ```bash
-# Install frontend dependencies
+# Navigate to frontend
+cd frontend
+
+# Install dependencies
 npm install
 
 # Start development server
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173`
-
-#### 3. Backend Setup
-
-```bash
-# Navigate to backend directory
-cd backend
-
-# Create virtual environment
-python -m venv .venv
-
-# Activate virtual environment
-# On Windows:
-.venv\Scripts\activate
-# On macOS/Linux:
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-#### 4. Database Setup
-
-```bash
-# Create MySQL database
-mysql -u root -p
-CREATE DATABASE student_management;
-exit
-
-# Configure environment variables
-cp .env.example .env
-# Edit .env with your database credentials
-```
-
-#### 5. Initialize Database
-
-```bash
-# Run database migrations
-python init_db.py
-
-# Initialize subject data
-python init_subject_db.py
-```
-
-#### 6. Start Backend Server
-
-```bash
-# Start FastAPI server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-The backend API will be available at `http://localhost:8000`
-
-### 🏃‍♂️ Running the Application
-
-Based on the memory from your previous demo setup, here are the simple commands:
-
-**Frontend (React):**
-```bash
-npm run dev
-```
-
-**Backend (FastAPI):**
-```bash
-cd backend
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
-uvicorn app.main:app --reload
-```
-
-## 💻 Usage Guide
-
-### Admin Portal (`/admin`)
-
-The admin dashboard provides comprehensive management capabilities:
-
-#### Student Management
-- **Add Students**: Individual student entry with photo upload
-- **Bulk Import**: Excel/CSV file upload with validation
-- **Student List**: Searchable, sortable student directory
-- **Export Data**: Download student data in Excel/CSV formats
-
-#### Subject Management
-- **Subject Master**: Manage academic subjects
-- **Mumbai University Integration**: Pre-loaded MU subject database
-- **Course Assignment**: Link subjects to students
-
-#### Bulk Operations
-1. **Download Template**: Get Excel template with proper headers
-2. **Upload File**: Drag-and-drop or browse for Excel/CSV files
-3. **Preview**: Validate data before import
-4. **Import**: Process and save validated records
-
-### Student Portal (`/student`)
-
-Students can access their information by entering:
-- Roll number (e.g., `SCOE1001`)
-- Email address
-
-**Features:**
-- Personal information display
-- Academic details and enrolled subjects
-- Contact information
-- Account statistics
-
-### Landing Page (`/`)
-
-- System overview and features
-- Portal access buttons
-- Institutional branding
-
-### Examination Management (`/admin` - Examinations Tab)
-
-The comprehensive examination management system handles the complete exam lifecycle:
-
-#### Exam Event Management
-- **Create Exam Events**: Define exam sessions (Mid-term, End-term, Internal, Practical, Viva, Project)
-- **Event Configuration**: Set department, semester, academic year, and date ranges
-- **Status Tracking**: Draft → Scheduled → Ongoing → Completed workflow
-- **Event Selection**: Choose active exam event for all operations
-
-#### Exam Scheduling
-- **Subject-wise Scheduling**: Add individual exam sessions with date, time, and venue
-- **Conflict Detection**: Automatic validation for venue and supervisor conflicts
-- **Marks Configuration**: Set maximum marks and passing marks per subject
-- **Timetable View**: Visual representation of exam schedule
-
-#### Student Enrollment Management
-- **Bulk Enrollment**: Automatically enroll all eligible students based on department/semester
-- **Individual Enrollment**: Add specific students to exam events
-- **Enrollment Status**: Track enrolled, absent, exempted, and disqualified students
-- **Special Cases**: Handle backlog students and subject exemptions
-- **Enrollment Statistics**: Real-time counts and analytics
-
-#### Marks Entry System
-- **Subject Selection**: Choose exam subject for marks entry
-- **Attendance Tracking**: Mark students as present or absent
-- **Individual Entry**: Enter marks for each student with validation
-- **Bulk Entry**: Apply same marks to multiple students
-- **Grade Calculation**: Automatic grade assignment based on marks
-- **Validation**: Ensure marks are within valid range (0 to max marks)
-
-#### Results and Analytics
-- **Result Generation**: Calculate overall results, grades, and rankings
-- **Statistics Dashboard**: Pass/fail rates, grade distribution, averages
-- **Student Rankings**: Automatic ranking based on performance
-- **Subject-wise Analysis**: Individual subject performance tracking
-- **Export Results**: Download results in Excel format
-- **Result Status**: Track passed, failed, and absent students
-
-## 🔧 API Documentation
-
-### Base URL
-```
-http://localhost:8000/api/v1
-```
-
-### Student Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/students/` | List all students with pagination |
-| `POST` | `/students/` | Create new student |
-| `GET` | `/students/{id}` | Get student by ID |
-| `PUT` | `/students/{id}` | Update student |
-| `DELETE` | `/students/{id}` | Delete student |
-| `GET` | `/students/count` | Get total student count |
-| `GET` | `/students/export/excel` | Export students to Excel |
-| `GET` | `/students/export/csv` | Export students to CSV |
-| `POST` | `/students/import/preview` | Preview import file |
-| `POST` | `/students/import/save` | Import validated data |
-| `GET` | `/students/import/template-new` | Download import template |
-
-### Subject Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/subjects/` | List all subjects |
-| `POST` | `/subjects/` | Create new subject |
-| `GET` | `/subjects/{id}` | Get subject by ID |
-| `PUT` | `/subjects/{id}` | Update subject |
-| `DELETE` | `/subjects/{id}` | Delete subject |
-
-### Examination Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/exams/events/` | List all exam events |
-| `POST` | `/exams/events/` | Create new exam event |
-| `GET` | `/exams/events/{id}` | Get exam event by ID |
-| `PUT` | `/exams/events/{id}` | Update exam event |
-| `DELETE` | `/exams/events/{id}` | Delete exam event |
-| `GET` | `/exams/events/{id}/schedules/` | Get exam schedules for event |
-| `POST` | `/exams/events/{id}/schedules/` | Add exam schedule to event |
-| `GET` | `/exams/events/{id}/enrollments/` | Get student enrollments |
-| `POST` | `/exams/events/{id}/enrollments/bulk` | Bulk enroll students |
-| `GET` | `/exams/events/{id}/results/` | Get exam results |
-| `POST` | `/exams/events/{id}/results/generate` | Generate exam results |
-| `GET` | `/exams/events/{id}/results/statistics/` | Get result statistics |
-| `GET` | `/exams/events/{id}/results/export` | Export results to Excel |
-| `GET` | `/exams/schedules/{id}/student-exams/` | Get student exams for schedule |
-| `POST` | `/exams/student-exams/bulk-marks` | Bulk update marks |
-| `PUT` | `/exams/student-exams/{id}` | Update student exam |
-| `GET` | `/exams/dashboard/overview` | Get exam dashboard data |
-
-### Example API Calls
-
-#### Create Student
-```bash
-curl -X POST "http://localhost:8000/api/v1/students/" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "first_name": "John",
-    "middle_name": "Kumar",
-    "last_name": "Doe",
-    "email": "john.doe@gmail.com",
-    "phone": "9876543210",
-    "date_of_birth": "2000-01-15",
-    "gender": "male",
-    "address": "123 Main Street, Mumbai",
-    "state": "1st Year",
-    "country": "India",
-    "admission_number": "SCOE1001",
-    "roll_number": "SCOE1001",
-    "institutional_email": "john.doe@scoe.edu.in",
-    "department": "Computer Science Engineering",
-    "category": "General",
-    "mother_name": "Jane Doe"
-  }'
-```
-
-#### Get Students with Search
-```bash
-curl "http://localhost:8000/api/v1/students/?search=john&limit=10&skip=0"
-```
-
-#### Create Exam Event
-```bash
-curl -X POST "http://localhost:8000/api/v1/exams/events/" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Mid-Term Examination 2024",
-    "description": "Mid-term exams for Spring semester",
-    "exam_type": "mid_term",
-    "department": "Computer Science Engineering",
-    "semester": 3,
-    "academic_year": "2023-24",
-    "start_date": "2024-03-15",
-    "end_date": "2024-03-25",
-    "instructions": "Bring valid ID and stationery"
-  }'
-```
-
-#### Bulk Enroll Students
-```bash
-curl -X POST "http://localhost:8000/api/v1/exams/events/1/enrollments/bulk" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "exam_event_id": 1,
-    "department": "Computer Science Engineering",
-    "semester": 3,
-    "enrolled_by": "Admin"
-  }'
-```
-
-## 📊 Data Models
-
-### Student Model
-
-```python
-class Student(Base):
-    id: int
-    first_name: str
-    middle_name: str
-    last_name: str
-    email: str (unique)
-    phone: str (unique)
-    date_of_birth: date
-    gender: Gender (male/female/other)
-    address: str
-    state: str  # Academic year
-    country: str
-    admission_number: str (unique)
-    roll_number: str (unique)
-    institutional_email: str (unique)
-    department: str
-    category: str  # General/OBC/SC/ST
-    mother_name: str
-```
-
-### Subject Model
-
-```python
-class Subject(Base):
-    id: int
-    name: str
-    code: str (unique)
-    credits: int
-    semester: int
-    department: str
-    description: str
-```
-
-### Examination Models
-
-#### ExamEvent Model
-```python
-class ExamEvent(Base):
-    id: int
-    name: str
-    description: str
-    exam_type: ExamType (mid_term/end_term/internal/practical/viva/project)
-    status: ExamStatus (draft/scheduled/ongoing/completed/cancelled)
-    department: str
-    semester: int
-    academic_year: str
-    start_date: date
-    end_date: date
-    instructions: str
-    created_by: str
-```
-
-#### ExamSchedule Model
-```python
-class ExamSchedule(Base):
-    id: int
-    exam_event_id: int
-    subject_id: int
-    exam_date: date
-    start_time: time
-    end_time: time
-    venue: str
-    supervisor: str
-    max_marks: int
-    passing_marks: int
-```
-
-#### StudentExamEnrollment Model
-```python
-class StudentExamEnrollment(Base):
-    id: int
-    exam_event_id: int
-    student_id: int
-    enrollment_status: EnrollmentStatus (enrolled/absent/exempted/disqualified)
-    enrollment_date: datetime
-    is_backlog_student: bool
-    exempted_subjects: str
-    special_requirements: str
-    notes: str
-    enrolled_by: str
-```
-
-#### StudentExam Model
-```python
-class StudentExam(Base):
-    id: int
-    student_exam_enrollment_id: int
-    exam_schedule_id: int
-    student_id: int
-    attendance_status: AttendanceStatus (present/absent)
-    marks_obtained: float
-    grade: str
-    remarks: str
-```
-
-#### ExamResult Model
-```python
-class ExamResult(Base):
-    id: int
-    exam_event_id: int
-    student_id: int
-    total_marks: float
-    total_max_marks: float
-    percentage: float
-    overall_grade: str
-    result_status: ResultStatus (passed/failed/absent)
-    gpa: float
-    rank: int
-    generated_at: datetime
-```
-
-## 🔄 Data Flow
-
-### Student Registration Flow
-
-```
-1. Admin accesses Admin Portal
-2. Chooses between individual entry or bulk upload
-3. For bulk upload:
-   a. Downloads template
-   b. Fills data in Excel/CSV
-   c. Uploads file
-   d. System validates data
-   e. Preview shows validation results
-   f. Admin confirms import
-   g. System generates roll numbers and emails
-   h. Data saved to database
-```
-
-### Student Portal Access Flow
-
-```
-1. Student visits Student Portal
-2. Enters roll number or email
-3. System searches database
-4. If found, displays student dashboard
-5. Shows personal info, subjects, and stats
-```
-
-### Examination Management Flow
-
-```
-1. Create Exam Event
-   a. Admin creates exam event (Mid-term/End-term/etc.)
-   b. Sets department, semester, academic year
-   c. Defines date range and instructions
-   d. Event status: Draft → Scheduled
-
-2. Schedule Exams
-   a. Select exam event
-   b. Add subject-wise exam schedules
-   c. Set date, time, venue, supervisor
-   d. Configure marks (max marks, passing marks)
-   e. System validates for conflicts
-
-3. Enroll Students
-   a. Bulk enroll all eligible students OR
-   b. Individual student enrollment
-   c. Handle special cases (backlog, exemptions)
-   d. Track enrollment statistics
-
-4. Conduct Exams & Enter Marks
-   a. Select exam schedule/subject
-   b. Mark attendance (present/absent)
-   c. Enter marks for present students
-   d. Add remarks if needed
-   e. System validates marks range
-   f. Bulk save all entries
-
-5. Generate Results
-   a. Calculate total marks and percentage
-   b. Assign grades based on performance
-   c. Generate student rankings
-   d. Create result statistics
-   e. Export results to Excel
-
-6. View Analytics
-   a. Dashboard shows exam statistics
-   b. Pass/fail rates and grade distribution
-   c. Subject-wise performance analysis
-   d. Student ranking and achievements
-```
-
-## 🛠️ Configuration
-
-### Environment Variables
-
-Create a `.env` file in the `backend/` directory:
-
-```env
-# Database Configuration
-MYSQL_SERVER=localhost
-MYSQL_PORT=3306
-MYSQL_USER=root
-MYSQL_PASSWORD=your_password
-MYSQL_DB=student_management
-
-# SMTP Configuration (Optional)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASSWORD=your_app_password
-SMTP_FROM_EMAIL=your_email@gmail.com
-```
-
-### Department Configuration
-
-The system supports these departments with auto-generated roll number ranges:
-
-- **Computer Science Engineering**: SCOE1000-1999
-- **Information Technology**: SCOE3000-3999
-- **Electronics and Communication**: SCOE5000-5999
-- **Electrical Engineering**: SCOE7000-7999
-- **Mechanical Engineering**: SCOE8000-8999
-- **Civil Engineering**: SCOE9000-9999
-
-## 📁 File Upload Specifications
-
-### Supported Formats
-- Excel (.xlsx)
-- CSV (.csv)
-
-### Required Columns
-| Column | Required | Format | Example |
-|--------|----------|--------|---------|
-| First Name | Yes | Text | John |
-| Middle Name | Yes | Text | Kumar |
-| Last Name | Yes | Text | Doe |
-| Address | Yes | Text | 123 Main St, Mumbai |
-| Gender | Yes | Male/Female | Male |
-| Category | Yes | General/OBC/SC/ST | General |
-| Date of Birth | Yes | YYYY-MM-DD | 2000-01-15 |
-| Phone Number | Yes | 10 digits | 9876543210 |
-| Branch | Yes | Full department name | Computer Science Engineering |
-| Year | Yes | 1st/2nd/3rd/4th Year | 1st Year |
-| Mother Name | Yes | Text | Jane Doe |
-
-### General System
-- [ ] Mobile application
-- [ ] Advanced analytics dashboard
-- [ ] Automated email notifications
-- [ ] Integration with academic management systems
-- [ ] Biometric authentication
-- [ ] Multi-language support
-- [ ] Advanced reporting with charts
-- [ ] API rate limiting and authentication
-- [ ] Real-time notifications
-- [ ] Audit logging
-
-### Examination System
-- [ ] Online examination platform
-- [ ] Automated question paper generation
-- [ ] Anti-plagiarism detection
-- [ ] Proctoring system integration
-- [ ] Advanced result analytics with charts
-- [ ] Parent/guardian result notifications
-- [ ] Grade curve analysis
-- [ ] Historical performance tracking
-- [ ] Automated revaluation system
-- [ ] Integration with external assessment tools
-- [ ] Seating arrangement automation
-- [ ] Hall ticket generation
-- [ ] Answer sheet scanning and evaluation
+**Frontend runs on:** `http://localhost:5173`
 
 ---
 
-**Built with ❤️ for modern educational institutions**
+## 🔐 Default Credentials
 
-*SCOEFLOW CONNECT - Streamlining Campus Management*
+### **Admin Portal** (`/admin`)
+- **Email:** `Praut1086@gmail.com`
+- **Password:** `admin123`
+
+### **Student Portal** (`/student`)
+- **Email:** Any student's institutional email (e.g., `harsh.shah@gmail.com`)
+- **Password:** `Student@123` (default for all students)
+
+---
+
+## 📱 Application Routes
+
+### **Public Routes**
+- `/` - Landing page
+- `/admin` - Admin login
+- `/student` - Student login
+
+### **Admin Portal Features**
+- Student Management (Add, Edit, Delete, Bulk Upload)
+- Subject Master
+- Examination Management
+  - Create Exam Events
+  - Schedule Exams
+  - Review Enrollment Applications
+  - Enter Component Marks
+  - Calculate Results
+  - Publish Results
+
+### **Student Portal Features**
+- View Profile
+- Exam Notifications
+- Apply for Exams
+- Download Results (CSV)
+- Change Password
+
+---
+
+## 🎯 Key Workflows
+
+### **1. Student Enrollment Workflow**
+1. Admin creates exam event
+2. Admin schedules exam
+3. Student sees notification in portal
+4. Student applies for exam
+5. Admin reviews and approves/rejects
+6. Approved students are enrolled
+
+### **2. Marks Entry & Result Generation**
+1. Admin enters IA1 marks → `student_exam_component_marks`
+2. Admin enters IA2 marks → `student_exam_component_marks`
+3. Admin enters Oral marks → `student_exam_component_marks`
+4. Admin enters ESE marks → `student_exam_component_marks`
+5. Admin clicks "Calculate All Subject Results"
+   - System checks if student passed EACH component
+   - Calculates total marks and percentage
+   - Assigns grade (A+ to F)
+   - Stores in `subject_final_results`
+6. Admin clicks "Calculate All SGPA/CGPA"
+   - Computes SGPA = Σ(credits × grade_points) / Σ(credits)
+   - Determines result class
+   - Stores in `semester_results`
+7. Admin clicks "Publish Results to Students"
+   - Creates entries in `published_results`
+   - Students can now download results
+
+### **3. Student Result Download**
+1. Student logs into portal
+2. Clicks "Download Result" button
+3. System fetches detailed result with all subject marks
+4. Downloads CSV with:
+   - Roll number, name
+   - Subject-wise marks (IA1, IA2, Oral, ESE)
+   - Total marks, percentage, grade
+   - SGPA, CGPA, Result Class
+
+---
+
+## 🎓 Mumbai University Compliance
+
+### **Grading Scale**
+| Grade | Grade Points | Percentage |
+|-------|-------------|------------|
+| A+    | 10          | 80-100%    |
+| A     | 9           | 70-79%     |
+| B+    | 8           | 60-69%     |
+| B     | 7           | 55-59%     |
+| C     | 6           | 50-54%     |
+| D     | 5           | 40-49%     |
+| F     | 0           | 0-39%      |
+
+### **Component-Wise Passing**
+- Student must pass EACH component (IA1, IA2, Oral, ESE) individually
+- Passing marks: Typically 40% of max marks for each component
+- Overall percentage must also be >= 40%
+- **Example:** Student with 50% total but failed IA1 = FAIL
+
+### **Result Class**
+- **First Class with Distinction**: SGPA >= 7.5
+- **First Class**: SGPA >= 6.0
+- **Second Class**: SGPA >= 5.0
+- **Pass Class**: SGPA >= 4.0
+- **Fail**: SGPA < 4.0
+
+---
+
+## 📂 Project Structure
+
+```
+PROJECTSCOE2/
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/endpoints/    # API routes
+│   │   ├── core/                # Config, security
+│   │   ├── db/                  # Database setup
+│   │   ├── models/              # SQLAlchemy models
+│   │   ├── schemas/             # Pydantic schemas
+│   │   ├── services/            # Business logic
+│   │   └── data/                # Mumbai University subjects
+│   ├── migrations/              # Database migrations
+│   ├── .env                     # Environment variables
+│   └── requirements.txt         # Python dependencies
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/          # React components
+│   │   │   ├── ui/             # shadcn/ui components
+│   │   │   ├── AdminLayout.tsx
+│   │   │   ├── StudentPortal.tsx
+│   │   │   ├── ExaminationManagement.tsx
+│   │   │   ├── ComponentMarksEntrySimple.tsx
+│   │   │   ├── ResultsManager.tsx
+│   │   │   ├── DetailedResultSheet.tsx
+│   │   │   └── ...
+│   │   ├── hooks/              # Custom React hooks
+│   │   ├── lib/                # Utilities
+│   │   └── types/              # TypeScript types
+│   └── package.json            # Node dependencies
+│
+├── data/
+│   └── templates/              # Excel/CSV templates
+│
+├── database_schema.txt         # Database documentation
+└── README.md                   # This file
+```
+
+---
+
+## 🔧 API Endpoints
+
+### **Authentication**
+- `POST /api/v1/admin/auth/login` - Admin login
+- `POST /api/v1/students/auth/login` - Student login
+- `POST /api/v1/students/auth/change-password` - Change password
+
+### **Students**
+- `GET /api/v1/students/` - List students
+- `POST /api/v1/students/` - Create student
+- `PUT /api/v1/students/{id}` - Update student
+- `DELETE /api/v1/students/{id}` - Delete student
+- `POST /api/v1/students/bulk-upload` - Bulk import
+
+### **Subjects**
+- `GET /api/v1/subjects/` - List subjects
+- `POST /api/v1/subjects/` - Create subject
+- `GET /api/v1/subjects/catalog` - Get subject catalog
+
+### **Examinations**
+- `POST /api/v1/exams/events` - Create exam event
+- `POST /api/v1/exams/schedules` - Schedule exam
+- `GET /api/v1/enrollment-applications/` - List applications
+- `PUT /api/v1/enrollment-applications/{id}/approve` - Approve application
+
+### **Results**
+- `POST /api/v1/results/marks/component/bulk` - Enter component marks
+- `POST /api/v1/results/subject/calculate` - Calculate subject result
+- `POST /api/v1/results/semester/calculate` - Calculate SGPA/CGPA
+- `POST /api/v1/results/publish` - Publish results to students
+- `GET /api/v1/results/detailed-result-sheet/{student_id}` - Get detailed result
+- `GET /api/v1/results/student-published/{student_id}` - Get published results
+
+---
+
+## 🎨 UI Components
+
+### **Admin Portal**
+- Dashboard with statistics
+- Student list with search and filters
+- Bulk upload with drag-and-drop
+- Subject master form
+- Exam event creation
+- Marks entry interface
+- Results calculation and publishing
+- Detailed result view with subject breakdown
+
+### **Student Portal**
+- Profile information
+- Exam notifications
+- Enrollment application form
+- Result download button
+- Password change dialog
+
+---
+
+## 📈 Features Implemented
+
+### ✅ **Completed Features**
+- [x] Student CRUD operations
+- [x] Bulk import/export (Excel/CSV)
+- [x] Admin authentication
+- [x] Student authentication
+- [x] Subject master with components
+- [x] Exam event management
+- [x] Exam scheduling
+- [x] Student enrollment applications
+- [x] Component-based marks entry
+- [x] Component-wise passing enforcement
+- [x] SGPA/CGPA calculation
+- [x] Result class determination
+- [x] Detailed result view
+- [x] Result publishing system
+- [x] Student result download
+- [x] CSV export with subject details
+
+### 🚧 **Future Enhancements**
+- [ ] PDF result generation
+- [ ] Email notifications
+- [ ] Attendance management
+- [ ] Fee management
+- [ ] Library management
+- [ ] Timetable generation
+- [ ] Mobile app
+- [ ] Analytics dashboard
+- [ ] Report generation
+
+---
+
+## 🐛 Troubleshooting
+
+### **Backend Issues**
+
+**Database connection error:**
+```bash
+# Check MySQL is running
+mysql -u root -p
+
+# Verify credentials in .env file
+cat backend/.env
+
+# Recreate database
+mysql -u root -p
+CREATE DATABASE student_management;
+```
+
+**Migration errors:**
+```bash
+# Run migrations in order
+python migrate_add_password.py
+python migrate_add_enrollment_applications.py
+python migrate_add_result_system.py
+python migrate_add_student_progression.py
+python migrate_add_published_results.py
+```
+
+### **Frontend Issues**
+
+**Port already in use:**
+```bash
+# Kill process on port 5173
+lsof -ti:5173 | xargs kill -9
+npm run dev
+```
+
+**Module not found:**
+```bash
+# Clear cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+---
+
+## 📝 Environment Variables
+
+### **Backend (.env)**
+```env
+# Database
+DATABASE_URL=mysql+pymysql://root:password@localhost/student_management
+
+# Admin Credentials
+ADMIN_EMAIL=Praut1086@gmail.com
+ADMIN_PASSWORD=admin123
+
+# Security
+SECRET_KEY=your-secret-key-here
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+---
+
+## 🤝 Contributing
+
+This is an academic project for educational purposes. Feel free to fork and modify for your institution's needs.
+
+---
+
+## 📄 License
+
+This project is for educational purposes. All rights reserved.
+
+---
+
+## 👨‍💻 Author
+
+**Pranav Raut**
+- Email: Praut1086@gmail.com
+- Institution: Saraswati College of Engineering (SCOE)
+
+---
+
+## 🙏 Acknowledgments
+
+- Mumbai University for grading standards
+- FastAPI for excellent Python web framework
+- shadcn/ui for beautiful React components
+- React ecosystem for powerful frontend tools
+
+---
+
+## 📞 Support
+
+For issues or questions:
+1. Check the troubleshooting section
+2. Review the database schema documentation
+3. Contact: Praut1086@gmail.com
+
+---
+
+**Version:** 2.0  
+**Last Updated:** October 28, 2025  
+**Status:** Production Ready ✅
+
+---
+
+## 🎯 Quick Start Summary
+
+```bash
+# Backend
+cd backend
+source .venv/bin/activate
+uvicorn app.main:app --reload
+
+# Frontend (new terminal)
+cd frontend
+npm run dev
+
+# Access
+Admin: http://localhost:5173/admin
+Student: http://localhost:5173/student
+```
+
+**Ready for your viva! 🎓🚀**

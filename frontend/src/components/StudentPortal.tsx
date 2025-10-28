@@ -22,7 +22,8 @@ import {
   Eye,
   EyeOff,
   LogOut,
-  Key
+  Key,
+  Download
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from 'axios';
@@ -40,6 +41,101 @@ const StudentPortal = () => {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  const handleDownloadResult = async () => {
+    if (!student) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Fetch detailed result for this student
+      const response = await axios.get(
+        `/api/v1/results/detailed-result-sheet/${student.id}?academic_year=2025-26&semester=${student.current_semester || 2}`
+      );
+      
+      if (response.data && response.data.subjects) {
+        const data = response.data;
+        const subjects = data.subjects;
+        const summary = data.semester_summary;
+        
+        // Create CSV content - Simple table format
+        const csvRows = [];
+        
+        // Add headers
+        csvRows.push([
+          'Roll Number',
+          'Student Name',
+          'Subject Code',
+          'Subject Name',
+          'Credits',
+          'IA1 (Max: 20)',
+          'IA2 (Max: 20)',
+          'Oral (Max: 10)',
+          'ESE (Max: 50)',
+          'Total',
+          'Percentage',
+          'Grade',
+          'Status',
+          'SGPA',
+          'CGPA',
+          'Result Class'
+        ]);
+        
+        // Add subject rows
+        subjects.forEach((subject: any, index: number) => {
+          csvRows.push([
+            index === 0 ? data.student.roll_number : '', // Roll number only on first row
+            index === 0 ? data.student.name : '', // Name only on first row
+            subject.subject_code,
+            subject.subject_name,
+            subject.credits,
+            subject.components.IA?.marks_obtained || '-',
+            subject.components.IA?.marks_obtained || '-',
+            subject.components.OR?.marks_obtained || '-',
+            subject.components.ESE?.marks_obtained || '-',
+            `${subject.total_marks_obtained}/${subject.total_max_marks}`,
+            subject.percentage.toFixed(1) + '%',
+            subject.grade,
+            subject.is_pass ? 'Pass' : 'Fail',
+            index === 0 ? summary.sgpa.toFixed(2) : '', // SGPA only on first row
+            index === 0 ? summary.cgpa.toFixed(2) : '', // CGPA only on first row
+            index === 0 ? summary.result_class : '' // Result class only on first row
+          ]);
+        });
+        
+        // Convert to CSV string
+        const csvContent = csvRows.map(row => row.join(',')).join('\n');
+        
+        // Download CSV
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${student.roll_number}_result_sem${student.current_semester || 2}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
+        toast({
+          title: "✅ Result Downloaded!",
+          description: "Your result has been downloaded as CSV",
+        });
+      } else {
+        toast({
+          title: "No Results Found",
+          description: "Your results haven't been published yet",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "❌ Download Failed",
+        description: error.response?.data?.detail || "Failed to download result. Results may not be published yet.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -473,6 +569,16 @@ const StudentPortal = () => {
                     <CardTitle className="text-lg">Quick Actions</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full justify-start bg-green-50 hover:bg-green-100 border-green-200"
+                      onClick={handleDownloadResult}
+                      disabled={isLoading}
+                    >
+                      <Download className="mr-2 h-4 w-4 text-green-600" />
+                      <span className="text-green-700 font-medium">Download Result</span>
+                    </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
